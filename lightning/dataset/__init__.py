@@ -1,6 +1,5 @@
-def main():
-    pass
+"""
+Docstring
+"""
 
-
-if __name__ == "__main__":
-    main()
+from .dataset import *
