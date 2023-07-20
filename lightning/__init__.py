@@ -1,6 +1,7 @@
-def main():
-    pass
+"""
+Docstring
+"""
 
-
-if __name__ == "__main__":
-    main()
+from .models import *
+from .datamodule import *
+from .lightmodule import *
