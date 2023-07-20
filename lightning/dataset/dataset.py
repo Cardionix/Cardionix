@@ -4,7 +4,7 @@ Docstring
 
 __all__ = ["CardioDataset"]
 
-from typing import Literal
+from typing import Literal, Union, Any
 from pathlib import Path
 import os
 
@@ -21,7 +21,6 @@ import torchaudio.functional as F
 import pandas as pd
 
 
-
 class CardioDataset(Dataset):
     """
     Docstring
@@ -30,7 +29,7 @@ class CardioDataset(Dataset):
                  stage: Literal["train", "val", "test"],
                  data_dirpath: str | Path,
                  target_filepath: str | Path,
-                 transforms: Module | Sequential = None
+                 transforms: Union[Module, Sequential, Any]
                  ):
 
         self.stage = stage
