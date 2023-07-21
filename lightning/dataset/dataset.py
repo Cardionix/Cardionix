@@ -30,14 +30,11 @@ class DatasetParams(BaseModel):
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    stage: Literal["train", "val", "test"]
     audio_dirpath: DirectoryPath
     labels_filepath: FilePath
-    split_ratio: list[float]
-    transforms: Union[Module, Sequential]
+    split_ratio: list[float] = Field(default=[0.75, 0.25], max_items=3, min_items=2)
     random_seed: Optional[int] = 42
 
-    @classmethod
     @field_validator("labels_filepath")
     def labels_filepath_validator(cls, value):
         extension = str(value).rsplit(".", maxsplit=1)[-1]
@@ -48,20 +45,14 @@ class DatasetParams(BaseModel):
             )
         return value
 
-    @classmethod
     @field_validator("split_ratio")
     def split_ratio_validator(cls, value):
-        if len(value) == 0 or len(value) > 3:
-            raise ValueError(
-                f"The number of dataset splits should be 1-3, "
-                f"but received {len(value)}"
-            )
-
         if sum(value) != 1.0:
             raise ValueError(
                 f"The sum of all parts of the dataset partitions "
                 f"should be equal to 1.0, but the result is {sum(value)}"
             )
+        return value
 
 
 class CardioDataset(Dataset):
