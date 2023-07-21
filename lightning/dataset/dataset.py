@@ -4,9 +4,14 @@ Docstring
 
 __all__ = ["CardioDataset"]
 
-from typing import Literal, Union, Any
+from typing import Literal, Union, Any, Optional
 from pathlib import Path
 import os
+
+import pandas as pd
+
+from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import FilePath, DirectoryPath
 
 import torch
 from torch.utils.data import Dataset
@@ -18,7 +23,45 @@ from torchaudio import sox_effects
 import torchaudio.transforms as T
 import torchaudio.functional as F
 
-import pandas as pd
+
+class DatasetParams(BaseModel):
+    """
+    Docstring
+    """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    stage: Literal["train", "val", "test"]
+    audio_dirpath: DirectoryPath
+    labels_filepath: FilePath
+    split_ratio: list[float]
+    transforms: Union[Module, Sequential]
+    random_seed: Optional[int] = 42
+
+    @classmethod
+    @field_validator("labels_filepath")
+    def labels_filepath_validator(cls, value):
+        extension = str(value).rsplit(".", maxsplit=1)[-1]
+        if extension != "csv":
+            raise ValueError(
+                f"The file with an annotation of audio file classes "
+                f"must have the extension .csv, but received {extension}"
+            )
+        return value
+
+    @classmethod
+    @field_validator("split_ratio")
+    def split_ratio_validator(cls, value):
+        if len(value) == 0 or len(value) > 3:
+            raise ValueError(
+                f"The number of dataset splits should be 1-3, "
+                f"but received {len(value)}"
+            )
+
+        if sum(value) != 1.0:
+            raise ValueError(
+                f"The sum of all parts of the dataset partitions "
+                f"should be equal to 1.0, but the result is {sum(value)}"
+            )
 
 
 class CardioDataset(Dataset):
