@@ -7,15 +7,24 @@ __all__ = ["CardioDataModule"]
 
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from ..dataset import CardioDataset
+
+from .dataset import CardioDataset
+from ..validate import DatasetParams, ETLPipelineParams, DataModuleParams
 
 
 class CardioDataModule(pl.LightningDataModule):
-    def __init__(self, data_params: BaseModel):
+    """
+    Docstring
+    """
+    def __init__(self,
+                 dataset_params: DatasetParams,
+                 etl_pipeline_params: ETLPipelineParams,
+                 datamodule_params: DataModuleParams,
+                 ):
         super().__init__()
-        self.__dataset_params = data_params.dataset
-        self.__datamodule_params = data_params.datamodule
-        self.__transform_params = data_params.transform
+        self.__dataset_params = dataset_params
+        self.__datamodule_params = datamodule_params
+        self.__etl_pipeline_params = etl_pipeline_params
 
         self.__num_subsets = len(self.__dataset_params.split_ratio)
         self.__data_source = "https://www.kaggle.com/datasets/mersico/dangerous-heartbeat-dataset-dhd"
@@ -34,21 +43,21 @@ class CardioDataModule(pl.LightningDataModule):
         if stage == "train" or stage is None:
             self.__data_train = CardioDataset(
                 self.__dataset_params,
-                self.__transform_params,
+                self.__etl_pipeline_params,
                 stage="train"
             )
 
         if stage == "val" or stage is None:
             self.__data_val = CardioDataset(
                 self.__dataset_params,
-                self.__transform_params,
+                self.__etl_pipeline_params,
                 stage="val"
             )
 
         if self.__num_subsets == 3 and (stage == "test" or stage is None):
             self.__data_test = CardioDataset(
                 self.__dataset_params,
-                self.__transform_params,
+                self.__etl_pipeline_params,
                 stage="test"
             )
 

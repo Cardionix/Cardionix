@@ -4,55 +4,17 @@ Docstring
 
 __all__ = ["CardioDataset"]
 
-from typing import Literal, Union, Any, Optional
-from pathlib import Path
+from typing import Literal
 import os
+
+import torch
+from torch.utils.data import Dataset, Subset
+from torch.utils.data import random_split
 
 import pandas as pd
 
-from pydantic import BaseModel, ConfigDict, field_validator
-from pydantic import FilePath, DirectoryPath, Field
-
-import torch
-from torch.utils.data import Dataset
-from torch.nn import Module, Sequential, ModuleDict
-from torch.utils.data import random_split
-
-import torchaudio
-from torchaudio import sox_effects
-import torchaudio.transforms as T
-import torchaudio.functional as F
-
-
-class DatasetParams(BaseModel):
-    """
-    Docstring
-    """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    audio_dirpath: DirectoryPath
-    labels_filepath: FilePath
-    split_ratio: list[float] = Field(default=[0.75, 0.25], max_items=3, min_items=2)
-    random_seed: Optional[int] = 42
-
-    @field_validator("labels_filepath")
-    def labels_filepath_validator(cls, value):
-        extension = str(value).rsplit(".", maxsplit=1)[-1]
-        if extension != "csv":
-            raise ValueError(
-                f"The file with an annotation of audio file classes "
-                f"must have the extension .csv, but received {extension}"
-            )
-        return value
-
-    @field_validator("split_ratio")
-    def split_ratio_validator(cls, value):
-        if sum(value) != 1.0:
-            raise ValueError(
-                f"The sum of all parts of the dataset partitions "
-                f"should be equal to 1.0, but the result is {sum(value)}"
-            )
-        return value
+from .etl_pipeline import ETLPipeline
+from ..validate import DatasetParams, ETLPipelineParams
 
 
 class CardioDataset(Dataset):
@@ -61,7 +23,7 @@ class CardioDataset(Dataset):
     """
     def __init__(self,
                  dataset_params: DatasetParams,
-                 transform_params: TransformParams,
+                 etl_pipeline_params: ETLPipelineParams,
                  stage: Literal["train", "val", "test"]
                  ):
 
@@ -70,7 +32,7 @@ class CardioDataset(Dataset):
         self.__generator = torch.Generator().manual_seed(dataset_params.random_seed)
         self.__audio_dirpath = dataset_params.audio_dirpath
         self.__labels_df = pd.read_csv(dataset_params.labels_filepath)
-        self.__transforms = ETLPipeline(transform_params, stage)
+        self.__transforms = ETLPipeline(etl_pipeline_params, stage)
         self.__dataset = self.split_dataset()
 
         self.__classes_dict = {
@@ -92,27 +54,34 @@ class CardioDataset(Dataset):
         return waveform, torch.tensor(label, dtype=torch.int32)
 
     def split_dataset(self) -> Subset:
+        """
+        Docstring
+        """
         dataframe = self.__labels_df[["filename", "label"]]
         data = list(zip(list(dataframe.filename), list(dataframe.label)))
         split_datasets = random_split(data, self.__split_ratio, self.__generator)
 
         if self.__stage == "train":
-            return split_datasets[0]
+            dataset = split_datasets[0]
         elif self.__stage == "val":
-            return split_datasets[1]
+            dataset = split_datasets[1]
         elif self.__stage == "test" and len(self.__split_ratio) == 3:
-            return split_datasets[2]
+            dataset = split_datasets[2]
         else:
             raise ValueError(
                 f"Expected split ratio for the val stage should be 2 or 3 "
                 f"and for the test only 3, "
                 f"but got split ratio {self.__split_ratio} and stage {self.__stage}"
             )
+        return dataset
 
     @staticmethod
     def check_stage(stage: str) -> str:
-        if type(stage) is not str:
-            raise TypeError(f"Stage must be a string, but got {stage}")
+        """
+        Docstring
+        """
+        if isinstance(type(stage), str):
+            raise TypeError(f"Stage must be a string, but got {type(stage)}")
         if stage not in ["train", "val", "test"]:
             raise ValueError(f"Expected stage to be train or val or test, but got {stage}")
         return stage
