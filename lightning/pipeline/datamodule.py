@@ -8,7 +8,7 @@ __all__ = ["CardioDataModule"]
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from .dataset import CardioDataset
+from .dataset import CardioAnomalyDataset
 from ..validate import DatasetParams, ETLPipelineParams, DataModuleParams
 
 
@@ -41,21 +41,21 @@ class CardioDataModule(pl.LightningDataModule):
 
     def setup(self, stage: str = None) -> None:
         if stage == "train" or stage is None:
-            self.__data_train = CardioDataset(
+            self.__data_train = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
                 stage="train"
             )
 
         if stage == "val" or stage is None:
-            self.__data_val = CardioDataset(
+            self.__data_val = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
                 stage="val"
             )
 
         if self.__num_subsets == 3 and (stage == "test" or stage is None):
-            self.__data_test = CardioDataset(
+            self.__data_test = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
                 stage="test"
