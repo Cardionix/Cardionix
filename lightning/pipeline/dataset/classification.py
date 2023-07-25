@@ -2,7 +2,7 @@
 Docstring
 """
 
-__all__ = ["CardioDataset"]
+__all__ = ["CardioAnomalyDataset"]
 
 from typing import Literal
 import os
@@ -13,11 +13,11 @@ from torch.utils.data import random_split
 
 import pandas as pd
 
-from .etl_pipeline import ETLPipeline
-from ..validate import DatasetParams, ETLPipelineParams
+from ..etl_pipeline import ETLPipeline
+from lightning.validate import DatasetParams, ETLPipelineParams
 
 
-class CardioDataset(Dataset):
+class CardioAnomalyDataset(Dataset):
     """
     Docstring
     """
