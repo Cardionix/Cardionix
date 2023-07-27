@@ -13,8 +13,8 @@ from torch.utils.data import random_split
 
 import pandas as pd
 
-from ..etl_pipeline import ETLPipeline
 from lightning.validate import DatasetParams, ETLPipelineParams
+from ..etl_pipeline import ETLPipeline
 
 
 class CardioAnomalyDataset(Dataset):
