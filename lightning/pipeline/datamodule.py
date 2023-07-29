@@ -8,7 +8,7 @@ __all__ = ["CardioDataModule"]
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from .dataset import CardioAnomalyDataset
+from .datasets import CardioAnomalyDataset
 from ..validate import DatasetParams, ETLPipelineParams, DataModuleParams
 
 
