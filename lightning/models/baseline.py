@@ -2,7 +2,7 @@
 Docstring
 """
 
-__all__ = [""]
+__all__ = ["BaselineRNNModel"]
 
 from typing import Literal
 import torch
@@ -10,6 +10,9 @@ from torch import nn
 
 
 class Encoder(nn.Module):
+    """
+    Docstring
+    """
     def __init__(self,
                  encoder_depth: list,
                  padding: int = 2,
@@ -27,6 +30,9 @@ class Encoder(nn.Module):
         ])
 
     def encoder_block(self, in_channels: int, out_channels: int) -> nn.Sequential:
+        """
+        Docstring
+        """
         return nn.Sequential(
             nn.Conv1d(
                 in_channels=in_channels,
@@ -75,6 +81,9 @@ class Decoder(nn.Module):
                       activation: str,
                       dropout: float
                       ) -> nn.Sequential:
+        """
+        Docstring
+        """
         return nn.Sequential(
             nn.Linear(
                 in_features=in_features,
@@ -86,3 +95,53 @@ class Decoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decoder(x)
+
+
+class BaselineRNNModel(nn.Module):
+    """
+    Docstring
+    """
+    def __init__(self,
+                 encoder_depth: list,
+                 decoder_depth: list,
+                 rnn_input_size: int = 6,
+                 rnn_hidden_size: int = 256,
+                 activation: Literal["relu", "leaky_relu", "selu", "softmax"] = "relu",
+                 dropout: float = 0.3
+                 ):
+        super().__init__()
+
+        self.encoder = Encoder(
+            encoder_depth=encoder_depth,
+            padding=2,
+            stride=1,
+            kernel_size=5
+        )
+
+        self.rnn1 = nn.LSTM(
+            input_size=rnn_input_size,
+            hidden_size=rnn_hidden_size,
+            batch_first=True,
+        )
+
+        self.rnn2 = nn.LSTM(
+            input_size=rnn_hidden_size,
+            hidden_size=rnn_hidden_size // 2,
+            batch_first=True,
+        )
+
+        self.decoder = Decoder(
+            decoder_depth=decoder_depth,
+            dropout=dropout,
+            activation=activation
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Docstring
+        """
+        x = self.encoder(x)
+        output, _ = self.rnn1(x)
+        output, (hidden, _) = self.rnn2(output)
+        x = self.decoder(hidden)
+        return x
