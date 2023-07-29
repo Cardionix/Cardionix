@@ -4,8 +4,9 @@ Docstring
 
 __all__ = [""]
 
+from typing import Literal
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class Encoder(nn.Module):
@@ -43,3 +44,45 @@ class Encoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.encoder(x)
+
+
+class Decoder(nn.Module):
+    def __init__(self,
+                 decoder_depth: list,
+                 dropout: float = 0.3,
+                 activation: Literal["relu", "leaky_relu", "selu", "softmax"] = "relu"
+                 ):
+        super().__init__()
+        self.dropout = dropout
+        self.head_block_index = len(decoder_depth) - 2
+
+        self.activations = nn.ModuleDict([
+            ["relu", nn.ReLU()],
+            ["leaky_relu", nn.LeakyReLU()],
+            ["selu", nn.SELU()],
+            ["softmax", nn.Softmax(0)]
+        ])
+
+        self.decoder = nn.Sequential(*[
+            self.decoder_block(i, in_features, out_features, activation, dropout)
+            for i, (in_features, out_features) in enumerate(zip(decoder_depth, decoder_depth[1:]))
+        ])
+
+    def decoder_block(self,
+                      block_index: int,
+                      in_features: int,
+                      out_features: int,
+                      activation: str,
+                      dropout: float
+                      ) -> nn.Sequential:
+        return nn.Sequential(
+            nn.Linear(
+                in_features=in_features,
+                out_features=out_features
+            ),
+            self.activations["softmax" if block_index == self.head_block_index else activation],
+            nn.Dropout(dropout),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(x)
