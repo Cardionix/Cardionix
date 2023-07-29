@@ -84,14 +84,22 @@ class Decoder(nn.Module):
         """
         Docstring
         """
-        return nn.Sequential(
+        layers = list([])
+
+        layers.append(
             nn.Linear(
                 in_features=in_features,
                 out_features=out_features
-            ),
-            self.activations["softmax" if block_index == self.head_block_index else activation],
-            nn.Dropout(dropout),
+            )
         )
+
+        if block_index != self.head_block_index:
+            layers.append(self.activations[activation])
+            layers.append(nn.Dropout(dropout))
+        else:
+            layers.append(self.activations["softmax"])
+
+        return nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decoder(x)
