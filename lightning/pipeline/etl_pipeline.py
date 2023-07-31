@@ -43,13 +43,12 @@ class ETLPipeline(Module):
         """
         Docstring
         """
-        mfcc = np.mean(
+        return np.mean(
             librosa.feature.mfcc(
                 y=waveform,
                 sr=self.__sample_rate,
                 n_mfcc=self.__n_mfcc).T, axis=0
         )
-        return mfcc.reshape([-1, 1])
 
     def forward(self, filepath: str) -> torch.Tensor:
         """
