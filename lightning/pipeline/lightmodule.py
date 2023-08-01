@@ -5,11 +5,13 @@ Docstring
 __all__ = ["CardioLightningModule"]
 
 
-import wandb
+from typing import Optional
 import torch
+from torch import Tensor
 from torch import nn
 from torch.optim import lr_scheduler
 import pytorch_lightning as pl
+from .metrics import LightMetrics
 
 
 class CardioLightningModule(pl.LightningModule):
@@ -17,17 +19,15 @@ class CardioLightningModule(pl.LightningModule):
     Docstring
     """
     def __init__(self,
-                 lightmodule_params: LightModuleParams,
                  model: nn.Module,
+                 class_weights: Optional[Tensor] = None
                  ):
         super().__init__()
         self.save_hyperparameters()
-        self.example_input_array = torch.zeros(size=lightmodule_params.example_input)
-        self.num_classes = lightmodule_params.num_classes
+        self.example_input_array = model.example_input_array
         self.model = model
-        self.class_weights = lightmodule_params.class_weights
-        self.criterion = nn.CrossEntropyLoss()
-        self.metrics = LightMetrics(classes=[])
+        self.criterion = nn.CrossEntropyLoss(weight=class_weights)
+        self.metrics = LightMetrics()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -37,15 +37,11 @@ class CardioLightningModule(pl.LightningModule):
         logites = self.forward(x.to(torch.float32))
         loss = self.criterion(logites, y.to(torch.int64))
         self.metrics.accumulate(logites, y)
-        return {f"{stage}_loss": loss}
-
-    def log_everything(self, metrics: dict) -> None:
-        wandb.log(metrics)
-        self.log_dict(metrics, prog_bar=True)
+        return loss
 
     def shared_epoch_end(self, stage: str) -> None:
         metrics = self.metrics.compute_metrics(stage)
-        self.log_everything(metrics)
+        self.log_dict(metrics, prog_bar=True)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         return self.shared_step(batch=batch, stage="train")
@@ -71,6 +67,10 @@ class CardioLightningModule(pl.LightningModule):
                 patience=5
             ),
             "interval": "epoch",
-            "monitor": "val_loss"
+            "monitor": "val/loss"
         }
-        return {"optimizer": optimizer, "lr_scheduler": scheduler_dict}
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": scheduler_dict
+        }
