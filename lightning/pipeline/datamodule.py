@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
 from .datasets import CardioAnomalyDataset
-from ..validate import DatasetParams, ETLPipelineParams, DataModuleParams
+from ..config import DatasetParams, ETLPipelineParams, DataModuleParams
 
 
 class CardioDataModule(pl.LightningDataModule):

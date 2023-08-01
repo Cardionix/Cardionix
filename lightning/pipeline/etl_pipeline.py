@@ -10,7 +10,7 @@ import torch
 from torch.nn import Module
 import librosa
 
-from ..validate import ETLPipelineParams
+from ..config import ETLPipelineParams
 
 
 class ETLPipeline(Module):
