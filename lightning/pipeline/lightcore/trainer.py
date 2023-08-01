@@ -7,10 +7,11 @@ __all__ = ["LightTrainer"]
 from typing import Union, Optional
 
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
 import torch
+import torchinfo
 
 from .callbacks import hooks
-from pytorch_lightning.loggers import WandbLogger
 from lightning.config import DatasetParams, ETLPipelineParams
 from lightning.config import DataModuleParams, LightningModuleParams
 from lightning.pipeline.datamodule import CardioDataModule
@@ -34,6 +35,7 @@ class LightTrainer:
                  **kwargs
                  ):
 
+        self.model = lightmodule_config.model
         self.on_startup(seed)
 
         self.config = self.define_config(
@@ -86,11 +88,15 @@ class LightTrainer:
             datamodule=self.datamodule
         )
 
-    @staticmethod
-    def on_startup(seed: int) -> None:
+    def on_startup(self, seed: int) -> None:
         """
         Docstring
         """
         pl.seed_everything(seed)
         torch.set_float32_matmul_precision("medium")
         torch.cuda.empty_cache()
+        model_stats = torchinfo.summary(
+            model=self.model,
+            input_size=self.model.example_input_array.shape
+        )
+        print(model_stats)
