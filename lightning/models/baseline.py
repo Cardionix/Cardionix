@@ -66,7 +66,7 @@ class Decoder(nn.Module):
             ["relu", nn.ReLU()],
             ["leaky_relu", nn.LeakyReLU()],
             ["selu", nn.SELU()],
-            ["softmax", nn.Softmax(0)]
+            ["softmax", nn.Softmax(1)]
         ])
 
         self.decoder = nn.Sequential(*[
@@ -96,8 +96,6 @@ class Decoder(nn.Module):
         if block_index != self.head_block_index:
             layers.append(self.activations[activation])
             layers.append(nn.Dropout(dropout))
-        else:
-            layers.append(self.activations["softmax"])
 
         return nn.Sequential(*layers)
 
@@ -110,6 +108,7 @@ class BaselineRNNModel(nn.Module):
     Docstring
     """
     def __init__(self,
+                 example_input_array: tuple[int, ...],
                  encoder_depth: list,
                  decoder_depth: list,
                  rnn_input_size: int = 6,
@@ -118,6 +117,7 @@ class BaselineRNNModel(nn.Module):
                  dropout: float = 0.3
                  ):
         super().__init__()
+        self.example_input_array = torch.zeros(size=example_input_array)
 
         self.encoder = Encoder(
             encoder_depth=encoder_depth,
