@@ -12,21 +12,19 @@ from torch import nn
 from torch.optim import lr_scheduler
 import pytorch_lightning as pl
 from .metrics import LightMetrics
+from lightning.config import LightningModuleParams
 
 
 class CardioLightningModule(pl.LightningModule):
     """
     Docstring
     """
-    def __init__(self,
-                 model: nn.Module,
-                 class_weights: Optional[Tensor] = None
-                 ):
+    def __init__(self, lightning_module_params: LightningModuleParams):
         super().__init__()
         self.save_hyperparameters()
-        self.example_input_array = model.example_input_array
-        self.model = model
-        self.criterion = nn.CrossEntropyLoss(weight=class_weights)
+        self.model = lightning_module_params.model
+        self.example_input_array = self.model.example_input_array
+        self.criterion = nn.CrossEntropyLoss(weight=lightning_module_params.class_weights)
         self.metrics = LightMetrics()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
