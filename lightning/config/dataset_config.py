@@ -18,7 +18,7 @@ class DatasetParams(BaseModel):
     audio_dirpath: DirectoryPath
     labels_filepath: FilePath
     split_ratio: list[float] = Field(default=[0.75, 0.25], max_items=3, min_items=2)
-    random_seed: Optional[int] = 42
+    random_seed: Optional[int] = None
 
     @field_validator("labels_filepath")
     def labels_filepath_validator(cls, value):
