@@ -1,5 +1,21 @@
 """
-Docstring
+Description:
+    Contains a list of ``hooks``, consisting of a set of initialized instances of the callbacks classes.
+    Callbacks specify events
+    that should occur during training under certain conditions
+    (for example, an early stop).
+
+For example::
+
+    hooks = [
+        EarlyStopping(
+            monitor="val/loss",
+            min_delta=2e-2,
+            patience=5,
+            verbose=False,
+            mode="min"
+            )
+        ]
 """
 
 __all__ = ["hooks"]
