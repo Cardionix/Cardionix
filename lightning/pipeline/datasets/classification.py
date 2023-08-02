@@ -1,5 +1,7 @@
 """
-Docstring
+Description:
+    The module contains a dataset subclass
+    for classifying heart rate deviations by sound.
 """
 
 __all__ = ["CardioAnomalyDataset"]
@@ -19,7 +21,7 @@ from ..etl_pipeline import ETLPipeline
 
 class CardioAnomalyDataset(Dataset):
     """
-    Docstring
+    Dataset subclass for classifying heart rate deviations by sound.
     """
     def __init__(self,
                  dataset_params: DatasetParams,
@@ -55,7 +57,8 @@ class CardioAnomalyDataset(Dataset):
 
     def split_dataset(self) -> Subset:
         """
-        Docstring
+        Splitting data into parts for different stages:
+        training, validation, testing.
         """
         dataframe = self.__labels_df[["filename", "label"]]
         data = list(zip(list(dataframe.filename), list(dataframe.label)))
@@ -78,7 +81,7 @@ class CardioAnomalyDataset(Dataset):
     @staticmethod
     def check_stage(stage: str) -> str:
         """
-        Docstring
+        Checking the stage argument against type and value.
         """
         if isinstance(type(stage), str):
             raise TypeError(f"Stage must be a string, but got {type(stage)}")
