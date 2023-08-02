@@ -16,8 +16,9 @@ from ..config import DatasetParams, ETLPipelineParams, DataModuleParams
 class CardioDataModule(pl.LightningDataModule):
 
     """
-    A DataModule standardizes the training, val, test splits, data preparation and transforms.
-    The main advantage is consistent data splits, data preparation and transforms across models.
+    Description:
+        A DataModule standardizes the training, val, test splits, data preparation and transforms.
+        The main advantage is consistent data splits, data preparation and transforms across models.
 
     Example::
 
@@ -42,6 +43,16 @@ class CardioDataModule(pl.LightningDataModule):
             def teardown(self):
                 # clean up after fit or test
                 # called on every process in DDP
+
+    Args:
+        dataset_params: (DataModuleParams) subclass of ``BaseModel``
+            containing parameters (configuration) for ``CardioDataModule`` initialization.
+
+        etl_pipeline_params: (DatasetParams) subclass of ``BaseModel``
+            containing parameters (configuration) for ``CardioAnomalyDataset`` initialization.
+
+        datamodule_params: (ETLPipelineParams) subclass of ``BaseModel``
+            containing parameters (configuration) for ``ETLPipeline`` initialization.
     """
     def __init__(self,
                  dataset_params: DatasetParams,
