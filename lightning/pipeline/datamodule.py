@@ -1,9 +1,10 @@
 """
-Docstring
+Description:
+    Contains the ``CardioDataModule`` class,
+    which initializes the ``CardioAnomalyDataset`` and issues a Dataloader depending on the learning stage.
 """
 
 __all__ = ["CardioDataModule"]
-
 
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
