@@ -1,6 +1,6 @@
 """
 Description:
-    The module trainer contains the LightTrainer class,
+    The module trainer contains the ``LightTrainer`` class,
     which is responsible for initializing training,
     building and logging the configurations of all modules and project packages.
 """
