@@ -2,6 +2,9 @@
 Description:
     The module contains a dataset subclass
     for classifying heart rate deviations by sound.
+    The class contains methods that allow it to flexibly share data for different stages,
+    as well as determine which features will be issued
+    thanks to the ETLPipeline class that is integrated into it.
 """
 
 __all__ = ["CardioAnomalyDataset"]
@@ -21,7 +24,20 @@ from ..etl_pipeline import ETLPipeline
 
 class CardioAnomalyDataset(Dataset):
     """
-    Dataset subclass for classifying heart rate deviations by sound.
+    Description:
+        Dataset subclass for classifying heart rate deviations by sound.
+
+    Args:
+        dataset_params: (DatasetParams) subclass of ``BaseModel``
+            containing parameters (configuration) for ``CardioAnomalyDataset`` initialization.
+
+        etl_pipeline_params: (ETLPipelineParams) subclass of ``BaseModel``
+            containing parameters (configuration) for ``ETLPipeline`` initialization.
+
+        stage: (Literal["train", "val", "test"]) the data is broken down into chunks specific to each ``stage``.
+            The ``stage`` argument passed will determine which part of the dataset to output at the given moment.
+            Stages: ``training``, ``validation``, ``testing``.
+
     """
     def __init__(self,
                  dataset_params: DatasetParams,
@@ -58,7 +74,9 @@ class CardioAnomalyDataset(Dataset):
     def split_dataset(self) -> Subset:
         """
         Splitting data into parts for different stages:
-        training, validation, testing.
+            1) training,
+            2) validation
+            3) testing.
         """
         dataframe = self.__labels_df[["filename", "label"]]
         data = list(zip(list(dataframe.filename), list(dataframe.label)))
@@ -80,9 +98,7 @@ class CardioAnomalyDataset(Dataset):
 
     @staticmethod
     def check_stage(stage: str) -> str:
-        """
-        Checking the stage argument against type and value.
-        """
+        """Checking the stage argument against type and value."""
         if isinstance(type(stage), str):
             raise TypeError(f"Stage must be a string, but got {type(stage)}")
         if stage not in ["train", "val", "test"]:
