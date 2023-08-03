@@ -1,10 +1,9 @@
 """
-Description:
-    The module contains a dataset subclass
-    for classifying heart rate deviations by sound.
-    The class contains methods that allow it to flexibly share data for different stages,
-    as well as determine which features will be issued
-    thanks to the ETLPipeline class that is integrated into it.
+The module contains a dataset subclass
+for classifying heart rate deviations by sound.
+The class contains methods that allow it to flexibly share data for different stages,
+as well as determine which features will be issued
+thanks to the ETLPipeline class that is integrated into it.
 """
 
 __all__ = ["CardioAnomalyDataset"]
@@ -24,8 +23,7 @@ from ..etl_pipeline import ETLPipeline
 
 class CardioAnomalyDataset(Dataset):
     """
-    Description:
-        Dataset subclass for classifying heart rate deviations by sound.
+    Dataset subclass for classifying heart rate deviations by sound.
 
     Args:
         dataset_params: (DatasetParams) subclass of ``BaseModel``
