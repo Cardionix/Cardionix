@@ -1,17 +1,16 @@
 """
-Description:
-    lightning is the main engine of the project, containing nested packages with:
-        1) implemented models,
-        2) a regular machine learning pipeline,
-        3) logging,
-        4) metrics,
-        5) callbacks,
-        6) ETL pipeline.
+lightning is the main engine of the project, containing nested packages with:
+    1) implemented models,
+    2) a regular machine learning pipeline,
+    3) logging,
+    4) metrics,
+    5) callbacks,
+    6) ETL pipeline.
 
-    It initializes the start of training and automatically logs all experiment results
-    through the high-level LightTrainer API.
-    It is necessary to import the trainer class, models and classes for configurations,
-    and then pass the configuration classes to the trainer class and call the ``fit()`` method.
+It initializes the start of training and automatically logs all experiment results
+through the high-level LightTrainer API.
+It is necessary to import the trainer class, models and classes for configurations,
+and then pass the configuration classes to the trainer class and call the ``fit()`` method.
 
 For example::
 
