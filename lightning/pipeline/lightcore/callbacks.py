@@ -1,9 +1,8 @@
 """
-Description:
-    Contains a list of ``hooks``, consisting of a set of initialized instances of the callbacks classes.
-    Callbacks specify events
-    that should occur during training under certain conditions
-    (for example, an early stop).
+Contains a list of ``hooks``, consisting of a set of initialized instances of the callbacks classes.
+Callbacks specify events
+that should occur during training under certain conditions
+(for example, an early stop).
 
 For example::
 
