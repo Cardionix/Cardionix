@@ -1,5 +1,7 @@
 """
-Docstring
+Contains a ``LightningModule`` subclass ``CardioLightningModule``.
+It is a high-level API for learning cycle management, validation and testing.
+This class also logs metrics and changes its behavior depending on callbaks.
 """
 
 __all__ = ["CardioLightningModule"]
@@ -17,7 +19,12 @@ from lightning.config import LightningModuleParams
 
 class CardioLightningModule(pl.LightningModule):
     """
-    Docstring
+    ``CardioLightningModule`` it is a high-level API for learning cycle management, validation and testing.
+    This class also logs metrics and changes its behavior depending on callbaks.
+
+    Args:
+        lightning_module_params: (LightningModuleParams) subclass of ``BaseModel``
+            containing parameters (configuration) for ``CardioLightningModule`` initialization.
     """
     def __init__(self, lightning_module_params: LightningModuleParams):
         super().__init__()

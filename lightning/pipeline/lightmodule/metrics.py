@@ -1,5 +1,8 @@
 """
-Docstring
+Contains a data structure ``MetricsStorage`` for accumulating predictions (probabilities)
+for a certain number of training iterations and a ``LightMetrics`` class
+that inherits the ability to accumulate predictions
+and calculate metrics for their subsequent logging.
 """
 
 __all__ = ["LightMetrics"]
@@ -13,7 +16,8 @@ from sklearn.metrics import classification_report, fbeta_score, roc_auc_score
 
 class MetricsStorage:
     """
-    Docstring
+    A data structure ``MetricsStorage`` for accumulating predictions
+    for a certain number of training iterations
     """
     def __init__(self):
         self.__y_prob = np.array([])
@@ -27,7 +31,8 @@ class MetricsStorage:
 
     def append(self, value: Union[list[np.ndarray | torch.Tensor] | tuple[np.ndarray | torch.Tensor]]):
         """
-        Docstring
+        The method concatenates model predictions (probabilities) and true class labels
+        into two pre-existing arrays to accumulate class labels and model predictions on each call.
         """
         y_prob, y_true = self.check_sanity(value)
         if len(self) != 0:
@@ -38,14 +43,18 @@ class MetricsStorage:
 
     def clear(self):
         """
-        Docstring
+        Clears all accumulated class labels and model predictions (probabilities),
+        redefining arrays to store them.
         """
         self.__y_prob = np.array([])
         self.__y_true = np.array([])
 
     def check_sanity(self, value: tuple[np.ndarray | torch.Tensor]) -> tuple[np.ndarray, np.ndarray]:
         """
-        Docstring
+        Checking the type of incoming data.
+        If it is np.ndarray, it will return unchanged.
+        If it's a torch.Tensor, it will convert to an np.ndarray array and return it.
+        If none of the conditions are met, it will return an error.
         """
         if not isinstance(value, (list, tuple)):
             raise TypeError(
@@ -70,7 +79,8 @@ class MetricsStorage:
     @staticmethod
     def to_array(value: list[torch.Tensor, torch.Tensor]) -> list[np.ndarray, np.ndarray]:
         """
-        Docstring
+        Returns a copy of the tensor on the CPU that will never be derived again,
+        and then cast to the np.ndarray array that will eventually be returned.
         """
         return [
             tensor.detach().cpu().numpy()
@@ -80,7 +90,25 @@ class MetricsStorage:
 
 class LightMetrics(MetricsStorage):
     """
-    Docstring
+    Inherits the ability to accumulate predictions
+    and calculate metrics for their subsequent logging.
+
+    Args:
+        from_logites: (bool) if true, then logits will be expected,
+            which first pass through the softmax activation function,
+            and then the resulting probabilities and the corresponding class labels
+            are accumulated for the subsequent calculation of metrics.
+            (logits are the output of the last layer of the neural network,
+            to which the softmax activation function was not applied).
+            Otherwise, not logs are expected at the input,
+            but probabilities that will be accumulated without any changes.
+
+        beta: (float) beta parameter represents the ratio of recall importance to precision importance.
+            beta > 1 gives more weight to recall, while beta < 1 favors precision.
+            For example, beta = 2 makes recall twice as important as precision,
+            while beta = 0.5 does the opposite.
+            Asymptotically, beta -> +inf considers only recall, and beta -> 0 only precision.
+            By default beta is 1.10.
     """
     def __init__(self,
                  from_logites: bool = True,
@@ -99,7 +127,9 @@ class LightMetrics(MetricsStorage):
                        class_report: dict
                        ) -> dict:
         """
-        Docstring
+        This method takes as input a set of metrics, which are dictionaries.
+        Each metric gets a new key, according to its logging stage (train, val, test).
+        A dictionary is returned that contains all computed metrics with new keys.
         """
         report = {
             f"{stage}/fbeta_score": fb_score,
@@ -116,7 +146,20 @@ class LightMetrics(MetricsStorage):
 
     def accumulate(self, y_prob: torch.Tensor, y_true: torch.Tensor) -> None:
         """
-        Docstring
+        The method concatenates model predictions and true class labels
+        into two pre-existing arrays to accumulate class labels and model predictions on each call.
+        if from_logites = true, then logits will be expected,
+        which first pass through the softmax activation function,
+        and then the resulting probabilities and the corresponding class labels
+        are accumulated for the subsequent calculation of metrics.
+        (logits are the output of the last layer of the neural network,
+        to which the softmax activation function was not applied).
+        Otherwise, not logs are expected at the input,
+        but probabilities that will be accumulated without any changes.
+
+        Args:
+            y_prob: (torch.Tensor) tezor with class probabilities or logits.
+            y_true: (torch.Tensor) tezor with class labels.
         """
         if self.from_logites:
             y_prob = F.softmax(y_prob, dim=1)
@@ -124,7 +167,9 @@ class LightMetrics(MetricsStorage):
 
     def compute_metrics(self, stage: Literal["train", "val", "test"]) -> dict:
         """
-        Docstring
+        Calculates the metrics from the accumulated array of probabilities
+        and the corresponding array with class labels for each set of probabilities.
+        Values accumulated over N iterations are averaged
         """
         y_prob, y_true = self[:]
         y_pred = np.argmax(y_prob, axis=1)
