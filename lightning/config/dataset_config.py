@@ -1,5 +1,6 @@
 """
-Docstring
+Contains a ``DatasetParams`` class
+with parameters for ``CardioAnomalyDataset`` configuration.
 """
 
 __all__ = ["DatasetParams"]
@@ -11,20 +12,30 @@ from pydantic import FilePath, DirectoryPath, Field
 
 class DatasetParams(BaseModel):
     """
-    Docstring
+    Сlass with parameters for ``CardioAnomalyDataset`` configuration.
+
+    Attributes:
+        audio_dirpath: (DirectoryPath) path to the directory with audio recordings of heartbeats.
+
+        labels_filepath: (FilePath) path to ``csv`` file with class tags for each heartbeat audio recording.
+
+        split_ratio: dataset partitioning factor.
+            If there are two numbers in the list, then the dataset will be divided into training and validation parts,
+            where the list element with index 0 will be the part of the training part of the dataset,
+            and with index 1 the part of the validation part.
+            If there are 3 values in the collection,
+            then the dataset will be divided into training, validation and test parts,
+            where the element with index 2 will determine the share of the test part.
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     audio_dirpath: DirectoryPath
     labels_filepath: FilePath
     split_ratio: list[float] = Field(default=[0.75, 0.25], max_items=3, min_items=2)
-    random_seed: Optional[int] = None
 
     @field_validator("labels_filepath")
     def labels_filepath_validator(cls, value):
-        """
-        Docstring
-        """
         extension = str(value).rsplit(".", maxsplit=1)[-1]
         if extension != "csv":
             raise ValueError(
@@ -35,9 +46,6 @@ class DatasetParams(BaseModel):
 
     @field_validator("split_ratio")
     def split_ratio_validator(cls, value):
-        """
-        Docstring
-        """
         if sum(value) != 1.0:
             raise ValueError(
                 f"The sum of all parts of the dataset partitions "
