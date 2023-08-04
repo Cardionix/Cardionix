@@ -1,7 +1,6 @@
 """
-Description:
-    Contains a ``ETLPipeline`` class which is a pipeline
-    for data preprocessing, feature extraction and augmentation.
+Contains a ``ETLPipeline`` class which is a pipeline
+for data preprocessing, feature extraction and augmentation.
 """
 
 __all__ = ["ETLPipeline"]
@@ -17,12 +16,11 @@ from ..config import ETLPipelineParams
 
 class ETLPipeline(Module):
     """
-    Description:
-        ETLPipeline is a high-level API that implements methods for
-        data preprocessing, feature extraction and augmentation.
-        Thus, it allows you to transform the data before issuing it.
-        This class must be integrated into any ``Dataset`` subclass
-        to process an audio sample before it is emitted, along with a class label.
+    ETLPipeline is a high-level API that implements methods for
+    data preprocessing, feature extraction and augmentation.
+    Thus, it allows you to transform the data before issuing it.
+    This class must be integrated into any ``Dataset`` subclass
+    to process an audio sample before it is emitted, along with a class label.
 
     Args:
         etl_pipeline_params: (ETLPipelineParams) subclass of ``BaseModel``

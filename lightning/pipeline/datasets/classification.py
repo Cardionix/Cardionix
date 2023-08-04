@@ -1,10 +1,9 @@
 """
-Description:
-    The module contains a dataset subclass
-    for classifying heart rate deviations by sound.
-    The class contains methods that allow it to flexibly share data for different stages,
-    as well as determine which features will be issued
-    thanks to the ETLPipeline class that is integrated into it.
+The module contains a dataset subclass
+for classifying heart rate deviations by sound.
+The class contains methods that allow it to flexibly share data for different stages,
+as well as determine which features will be issued
+thanks to the ETLPipeline class that is integrated into it.
 """
 
 __all__ = ["CardioAnomalyDataset"]
@@ -24,8 +23,7 @@ from ..etl_pipeline import ETLPipeline
 
 class CardioAnomalyDataset(Dataset):
     """
-    Description:
-        Dataset subclass for classifying heart rate deviations by sound.
+    Dataset subclass for classifying heart rate deviations by sound.
 
     Args:
         dataset_params: (DatasetParams) subclass of ``BaseModel``
@@ -73,11 +71,19 @@ class CardioAnomalyDataset(Dataset):
 
     def split_dataset(self) -> Subset:
         """
+        Randomly split a dataset into non-overlapping new datasets of given lengths.
+        If a list of fractions that sum up to 1 is given, the lengths will be computed automatically
+        as floor(frac * len(dataset)) for each fraction provided.
+        After computing the lengths, if there are any remainders,
+        1 count will be distributed in round-robin fashion to the lengths until there are no remainders left.
+        Optionally fix the generator for reproducible results, e.g.
+
         Splitting data into parts for different stages:
             1) training,
             2) validation
             3) testing.
         """
+
         dataframe = self.__labels_df[["filename", "label"]]
         data = list(zip(list(dataframe.filename), list(dataframe.label)))
         split_datasets = random_split(data, self.__split_ratio, self.__generator)

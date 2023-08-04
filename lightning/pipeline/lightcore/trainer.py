@@ -1,8 +1,7 @@
 """
-Description:
-    The module trainer contains the LightTrainer class,
-    which is responsible for initializing training,
-    building and logging the configurations of all modules and project packages.
+The module trainer contains the ``LightTrainer`` class,
+which is responsible for initializing training,
+building and logging the configurations of all modules and project packages.
 """
 
 __all__ = ["LightTrainer"]
@@ -23,14 +22,13 @@ from lightning.pipeline.lightmodule import CardioLightningModule
 
 class LightTrainer:
     r"""
-    Description:
-        LightTrainer is a wrapper for the ``Trainer`` class adapted to the current project for better usability
-        and it also high-level API for initializing and configuring the training process and model validation.
-        This class accepts parameters encapsulated in BaseModel subclasses,
-        which are then used to initialize the ``CardioLightningModule`` and ``CardioDataModule``
-        and then log the passed parameters as a common pipeline launch configuration.
-        There is also a group of arguments intended only for session logging
-        and another group of arguments intended only for initializing the ``Trainer`` class from ''pytorch_lightning''
+    LightTrainer is a wrapper for the ``Trainer`` class adapted to the current project for better usability
+    and it also high-level API for initializing and configuring the training process and model validation.
+    This class accepts parameters encapsulated in BaseModel subclasses,
+    which are then used to initialize the ``CardioLightningModule`` and ``CardioDataModule``
+    and then log the passed parameters as a common pipeline launch configuration.
+    There is also a group of arguments intended only for session logging
+    and another group of arguments intended only for initializing the ``Trainer`` class from ''pytorch_lightning''
 
     Args:
         datamodule_config: (DataModuleParams) subclass of ``BaseModel``
@@ -98,7 +96,6 @@ class LightTrainer:
 
         self.datamodule = CardioDataModule(dataset_config, etl_pipeline_config, datamodule_config)
         self.lightmodule = CardioLightningModule(lightmodule_config)
-        self.callbacks = hooks
         self.trainer = self.get_trainer(kwargs)
 
     @staticmethod
@@ -132,7 +129,7 @@ class LightTrainer:
         """
         return pl.Trainer(
             logger=self.logger,
-            callbacks=self.callbacks,
+            callbacks=hooks,
             **kwargs
         )
 

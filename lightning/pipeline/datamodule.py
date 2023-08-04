@@ -1,7 +1,6 @@
 """
-Description:
-    Contains the ``CardioDataModule`` class,
-    which initializes the ``CardioAnomalyDataset`` and issues a Dataloader depending on the learning stage.
+Contains the ``CardioDataModule`` class,
+which initializes the ``CardioAnomalyDataset`` and issues a Dataloader depending on the learning stage.
 """
 
 __all__ = ["CardioDataModule"]
@@ -16,9 +15,8 @@ from ..config import DatasetParams, ETLPipelineParams, DataModuleParams
 class CardioDataModule(pl.LightningDataModule):
 
     """
-    Description:
-        A DataModule standardizes the training, val, test splits, data preparation and transforms.
-        The main advantage is consistent data splits, data preparation and transforms across models.
+    A DataModule standardizes the training, val, test splits, data preparation and transforms.
+    The main advantage is consistent data splits, data preparation and transforms across models.
 
     Example::
 
