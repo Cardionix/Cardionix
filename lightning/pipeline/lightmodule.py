@@ -53,6 +53,7 @@ class CardioLightningModule(pl.LightningModule):
     def shared_epoch_end(self, stage: str) -> None:
         metrics = self.step_outputs[stage].compute_metrics()
         metrics[f"{stage}/loss"] = torch.stack(self.loss_dict[stage]).mean()
+        self.loss_dict[stage].clear()
         self.log_dict(metrics, prog_bar=True, logger=True, on_epoch=True)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> None:
