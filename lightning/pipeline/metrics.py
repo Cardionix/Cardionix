@@ -20,8 +20,8 @@ class MetricsStorage:
     for a certain number of training iterations
     """
     def __init__(self):
-        self.__y_prob = np.array([])
-        self.__y_true = np.array([])
+        self.__y_prob = np.array([], dtype=np.float32)
+        self.__y_true = np.array([], dtype=np.int8)
 
     def __len__(self) -> int:
         return len(self.__y_prob)
@@ -36,8 +36,8 @@ class MetricsStorage:
         """
         y_prob, y_true = self.check_sanity(value)
         if len(self) != 0:
-            y_prob = np.concatenate([self.__y_prob, y_prob], axis=0)
-            y_true = np.concatenate([self.__y_true, y_true], axis=0)
+            y_prob = np.concatenate([self.__y_prob, y_prob], axis=0, dtype=np.float32)
+            y_true = np.concatenate([self.__y_true, y_true], axis=0, dtype=np.int8)
         self.__y_prob = y_prob
         self.__y_true = y_true
 
@@ -46,8 +46,8 @@ class MetricsStorage:
         Clears all accumulated class labels and model predictions (probabilities),
         redefining arrays to store them.
         """
-        self.__y_prob = np.array([])
-        self.__y_true = np.array([])
+        self.__y_prob = np.array([], dtype=np.float32)
+        self.__y_true = np.array([], dtype=np.int8)
 
     def check_sanity(self, value: tuple[np.ndarray | torch.Tensor]) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -176,7 +176,7 @@ class LightMetrics(MetricsStorage):
         Values accumulated over N iterations are averaged
         """
         y_prob, y_true = self[:]
-        y_pred = np.argmax(y_prob, axis=1)
+        y_pred = np.argmax(y_prob, axis=1).astype(dtype=np.int8)
         self.clear()
 
         roc_auc = roc_auc_score(y_true, y_prob, multi_class="ovo")
