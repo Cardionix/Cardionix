@@ -49,4 +49,5 @@ class MFCCExtractor(Module):
         mfcc = self.mfcc_extractor(waveform).squeeze()
         if self.__average_by:
             mfcc = mfcc.mean(self.average_dict[self.__average_by])
+            mfcc = mfcc.unsqueeze(0)
         return mfcc
