@@ -2,8 +2,9 @@
 Docstring
 """
 
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from lightning import LightTrainer
-from lightning import BaselineRNNModel
+from lightning.models import BaselineRNNModel
 from lightning.config import DatasetParams, ETLPipelineParams
 from lightning.config import DataModuleParams, LightningModuleParams
 
@@ -14,22 +15,45 @@ def main(
         etl_pipeline_config: ETLPipelineParams,
         lightmodule_config: LightningModuleParams
 ):
+
+    callbacks = [
+        ModelCheckpoint(
+            dirpath="./checkpoints",
+            filename="epoch={epoch}-val_los={val/loss:.2f}",
+            monitor="val/loss",
+            mode="min",
+            save_top_k=5,
+            auto_insert_metric_name=False
+        ),
+
+        EarlyStopping(
+            monitor="val/loss",
+            mode="min",
+            patience=5,
+            min_delta=1e-5,
+        )
+    ]
+
     trainer = LightTrainer(
+        # Module configurations
         datamodule_config=datamodule_config,
         dataset_config=dataset_config,
         etl_pipeline_config=etl_pipeline_config,
         lightmodule_config=lightmodule_config,
+        # Logging configuration
         job_type="training",
         name="test_run",
-        project="CardioSonix",
         tags=None,
+        # Global seed
         seed=42,
+        # pl.Trainer kwargs
+        callbacks=callbacks,
         accelerator="auto",
         devices="auto",
         enable_model_summary=True,
         enable_progress_bar=True,
         fast_dev_run=False,
-        max_epochs=5,
+        max_epochs=2,
         min_epochs=1,
         num_nodes=1,
         strategy="auto"
@@ -59,7 +83,12 @@ if __name__ == "__main__":
         mono=True,
         extractor="MFCC",
         extractor_kwargs={
-            "n_mfcc": 52
+            "n_fft": 2048,
+            "win_length": 2048,
+            "hop_length": 1024,
+            "n_mels": 52,
+            "n_mfcc": 52,
+            "average_by": None
         }
     )
 
@@ -68,7 +97,10 @@ if __name__ == "__main__":
         num_workers=12
     )
 
-    lightmodule_params = LightningModuleParams(model=model)
+    lightmodule_params = LightningModuleParams(
+        model=model,
+        class_weights=None
+    )
 
     main(
         dataset_params,
