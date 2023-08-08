@@ -71,7 +71,6 @@ class LightTrainer:
                  etl_pipeline_config: ETLPipelineParams,
                  lightmodule_config: LightningModuleParams,
                  name: str,
-                 callbacks: Optional[list] = None,
                  job_type: Optional[str] = None,
                  project: Optional[str] = "CardioSonix",
                  tags: Optional[Union[list, tuple]] = None,
@@ -88,9 +87,9 @@ class LightTrainer:
             seed, kwargs
         )
 
-        self.callbacks = callbacks
         self.logger = WandbLogger(
             name=name, project=project,
+            log_model=True,
             config=self.config,
             job_type=job_type, tags=tags
         )
@@ -130,7 +129,6 @@ class LightTrainer:
         """
         return pl.Trainer(
             logger=self.logger,
-            callbacks=self.callbacks,
             **kwargs
         )
 
