@@ -11,9 +11,7 @@ from typing import Union, Optional, Any
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 import torch
-import torchinfo
 
-from .callbacks import hooks
 from lightning.config import DatasetParams, ETLPipelineParams
 from lightning.config import DataModuleParams, LightningModuleParams
 from lightning.pipeline.datamodule import CardioDataModule
@@ -73,6 +71,7 @@ class LightTrainer:
                  etl_pipeline_config: ETLPipelineParams,
                  lightmodule_config: LightningModuleParams,
                  name: str,
+                 callbacks: Optional[list] = None,
                  job_type: Optional[str] = None,
                  project: Optional[str] = "CardioSonix",
                  tags: Optional[Union[list, tuple]] = None,
@@ -89,9 +88,11 @@ class LightTrainer:
             seed, kwargs
         )
 
+        self.callbacks = callbacks
         self.logger = WandbLogger(
             name=name, project=project,
-            config=self.config, job_type=job_type, tags=tags
+            config=self.config,
+            job_type=job_type, tags=tags
         )
 
         self.datamodule = CardioDataModule(dataset_config, etl_pipeline_config, datamodule_config)
@@ -129,7 +130,7 @@ class LightTrainer:
         """
         return pl.Trainer(
             logger=self.logger,
-            callbacks=hooks,
+            callbacks=self.callbacks,
             **kwargs
         )
 
@@ -143,7 +144,8 @@ class LightTrainer:
             datamodule=self.datamodule
         )
 
-    def on_startup(self, seed: int) -> None:
+    @staticmethod
+    def on_startup(seed: int) -> None:
         """
         Method that sets seed for pseudo-random number generators in: pytorch, numpy, python.random.
         In addition, sets the following environment variables:
@@ -157,20 +159,8 @@ class LightTrainer:
 
         And Releases all unoccupied cached memory currently held by the caching allocator
         so that those can be used in other GPU application and visible in nvidia-smi.
-
-        And also summarize the given PyTorch model. Summarized information includes:
-            1) Layer names,
-            2) input/output shapes,
-            3) kernel shape,
-            4) # of parameters,
-            5) # of operations (Mult-Adds),
-            6) whether layer is trainable
         """
+
         pl.seed_everything(seed)
         torch.set_float32_matmul_precision("medium")
         torch.cuda.empty_cache()
-        model_stats = torchinfo.summary(
-            model=self.model,
-            input_size=self.model.example_input_array.shape
-        )
-        print(model_stats)

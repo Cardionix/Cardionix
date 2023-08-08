@@ -10,7 +10,6 @@ __all__ = ["BaselineRNNModel"]
 from typing import Literal, Optional
 import torch
 from torch import nn
-from .utils import _conv_shape_info
 
 
 class Encoder(nn.Module):
@@ -52,14 +51,15 @@ class Encoder(nn.Module):
                  activation: Literal["relu", "leaky_relu", "selu"] = "relu",
                  dropout: Optional[float] = None
                  ):
+
         super().__init__()
         self.padding = "same"
         self.stride = stride
         self.kernel_size = kernel_size
         self.activation = activation
-        self.features = input_shape[-1]
-        self.encoder_depth = [input_shape[0], *encoder_depth]
         self.dropout = dropout
+
+        self.encoder_depth = [input_shape[0], *encoder_depth]
         self.head_block_index = len(self.encoder_depth) - 2
 
         self.activations = nn.ModuleDict([
@@ -72,6 +72,13 @@ class Encoder(nn.Module):
             self.encoder_block(index, in_channels, out_channels)
             for index, (in_channels, out_channels) in enumerate(zip(self.encoder_depth, self.encoder_depth[1:]))
         ])
+
+        self.output_shape = self.__get_output_shape(input_shape)
+
+    def __get_output_shape(self, input_shape: tuple[int, ...]) -> tuple[int, ...]:
+        with torch.no_grad():
+            example_input = torch.zeros((1, *input_shape))
+            return self.encoder(example_input).shape
 
     def encoder_block(self, index: int, in_channels: int, out_channels: int) -> nn.Sequential:
         """
@@ -111,20 +118,6 @@ class Encoder(nn.Module):
             the output value from the MaxPool layer is equivalent to ``padding="same"`` in keras.
         """
 
-        conv_output_shape = _conv_shape_info(
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            in_features=self.features
-        )["output_shape"]["out_features"]
-
-        self.features = _conv_shape_info(
-            kernel_size=2,
-            stride=2,
-            padding=0,
-            in_features=conv_output_shape
-        )["output_shape"]["out_features"]
-
         block = nn.Sequential(
             nn.Conv1d(
                 in_channels=in_channels,
@@ -136,7 +129,7 @@ class Encoder(nn.Module):
 
             self.activations[self.activation],
             nn.MaxPool1d(kernel_size=2, stride=2),
-            nn.BatchNorm1d(self.features)
+            nn.BatchNorm1d(out_channels)
         )
 
         if self.dropout and self.head_block_index != index:
@@ -328,10 +321,12 @@ class BaselineRNNModel(nn.Module):
                  kernel_size: Optional[int] = 5,
                  stride: Optional[int] = 1,
                  activation: Literal["relu", "leaky_relu", "selu"] = "relu",
-                 dropout: Optional[float] = 0.0
+                 dropout: Optional[tuple[float, float, float]] = None
                  ):
+
         super().__init__()
-        self.example_input_array = torch.zeros(size=input_shape)
+        self.example_input_array = torch.zeros(size=(1, *input_shape))
+        self.dropout = dropout if dropout else (None, None, None)
 
         self.encoder = Encoder(
             encoder_depth=encoder_depth,
@@ -339,19 +334,19 @@ class BaselineRNNModel(nn.Module):
             stride=stride,
             kernel_size=kernel_size,
             activation=activation,
-            dropout=dropout
+            dropout=self.dropout[0]
         )
 
         self.rnn = LSTMModule(
-            input_shape=(encoder_depth[-1], self.encoder.features),
+            input_shape=self.encoder.output_shape,
             rnn_depth=rnn_depth,
-            dropout=dropout
+            dropout=self.dropout[1]
         )
 
         self.decoder = Decoder(
             input_shape=(rnn_depth[-1], 1),
             decoder_depth=decoder_depth,
-            dropout=dropout,
+            dropout=self.dropout[2],
             activation=activation
         )
 
@@ -359,4 +354,4 @@ class BaselineRNNModel(nn.Module):
         x = self.encoder(x)
         x = self.rnn(x)
         x = self.decoder(x)
-        return x
+        return x.squeeze()

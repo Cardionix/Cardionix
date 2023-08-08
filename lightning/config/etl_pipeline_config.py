@@ -5,7 +5,7 @@ with parameters for the configuration of the ETLPipeline class.
 
 __all__ = ["ETLPipelineParams"]
 
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, Field
 
 
@@ -23,7 +23,9 @@ class ETLPipelineParams(BaseModel):
 
         n_mfcc: (int) number of MFCCs to return.
     """
-    sample_rate: int = Field(default=22050, ge=4000, le=44100)
-    duration: int = Field(default=10, ge=1, le=15)
+
+    extractor: Literal["MFCC"]
+    extractor_kwargs: dict
+    sample_rate: Optional[int] = 22050
+    duration: Optional[int] = 10
     mono: Optional[bool] = True
-    n_mfcc: int = Field(default=52, ge=10)

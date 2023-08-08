@@ -76,21 +76,21 @@ class CardioDataModule(pl.LightningDataModule):
         )
 
     def setup(self, stage: str = None) -> None:
-        if stage == "train" or stage is None:
-            self.__data_train = CardioAnomalyDataset(
-                self.__dataset_params,
-                self.__etl_pipeline_params,
-                stage="train"
-            )
 
-        if stage == "val" or stage is None:
+        self.__data_train = CardioAnomalyDataset(
+            self.__dataset_params,
+            self.__etl_pipeline_params,
+            stage="train"
+        )
+
+        if self.__num_subsets >= 2:
             self.__data_val = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
                 stage="val"
             )
 
-        if self.__num_subsets == 3 and (stage == "test" or stage is None):
+        if self.__num_subsets == 3:
             self.__data_test = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,

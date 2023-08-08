@@ -10,7 +10,7 @@ __all__ = ["LightMetrics"]
 from typing import Union, Literal
 import numpy as np
 import torch
-import torch.functional as F
+import torch.nn.functional as F
 from sklearn.metrics import classification_report, fbeta_score, roc_auc_score
 
 
@@ -111,6 +111,7 @@ class LightMetrics(MetricsStorage):
             By default beta is 1.10.
     """
     def __init__(self,
+                 stage: Literal["train", "val", "test"],
                  from_logites: bool = True,
                  beta: float = 1.10,
                  ):
@@ -119,9 +120,9 @@ class LightMetrics(MetricsStorage):
         self.classes = ("normal", "murmur", "extrahls", "extrastole", "artifact")
         self.beta = beta
         self.from_logites = from_logites
+        self.stage = stage
 
     def define_metrics(self,
-                       stage: str,
                        roc_auc: float,
                        fb_score: float,
                        class_report: dict
@@ -132,16 +133,19 @@ class LightMetrics(MetricsStorage):
         A dictionary is returned that contains all computed metrics with new keys.
         """
         report = {
-            f"{stage}/fbeta_score": fb_score,
-            f"{stage}/roc_auc": roc_auc
+            f"{self.stage}/fbeta_score": fb_score,
+            f"{self.stage}/roc_auc": roc_auc
         }
 
         for key, item in class_report.items():
-            if isinstance(item, dict):
-                item.pop("support", None)
             if key.isdigit():
                 key = self.classes[int(key)]
-            report[f"{stage}/{key}"] = item
+            if isinstance(item, dict):
+                item.pop("support", None)
+                for key1, value1 in item.items():
+                    report[f"{self.stage}/{key}/{key1}"] = value1
+            else:
+                report[f"{self.stage}/{key}"] = item
         return report
 
     def accumulate(self, y_prob: torch.Tensor, y_true: torch.Tensor) -> None:
@@ -165,7 +169,7 @@ class LightMetrics(MetricsStorage):
             y_prob = F.softmax(y_prob, dim=1)
         self.append([y_prob, y_true])
 
-    def compute_metrics(self, stage: Literal["train", "val", "test"]) -> dict:
+    def compute_metrics(self) -> dict:
         """
         Calculates the metrics from the accumulated array of probabilities
         and the corresponding array with class labels for each set of probabilities.
@@ -178,5 +182,5 @@ class LightMetrics(MetricsStorage):
         roc_auc = roc_auc_score(y_true, y_prob, multi_class="ovo")
         fb_score = fbeta_score(y_true, y_pred, beta=self.beta, average="micro")
         class_report = classification_report(y_true, y_pred, output_dict=True)
-        metrics = self.define_metrics(stage, roc_auc, fb_score, class_report)
+        metrics = self.define_metrics(roc_auc, fb_score, class_report)
         return metrics

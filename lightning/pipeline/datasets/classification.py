@@ -45,10 +45,9 @@ class CardioAnomalyDataset(Dataset):
 
         self.__stage = self.check_stage(stage)
         self.__split_ratio = dataset_params.split_ratio
-        self.__generator = torch.Generator().manual_seed(dataset_params.random_seed)
         self.__audio_dirpath = dataset_params.audio_dirpath
         self.__labels_df = pd.read_csv(dataset_params.labels_filepath)
-        self.__transforms = ETLPipeline(etl_pipeline_params, stage)
+        self.__transforms = ETLPipeline(etl_pipeline_params)
         self.__dataset = self.split_dataset()
 
         self.__classes_dict = {
@@ -86,7 +85,7 @@ class CardioAnomalyDataset(Dataset):
 
         dataframe = self.__labels_df[["filename", "label"]]
         data = list(zip(list(dataframe.filename), list(dataframe.label)))
-        split_datasets = random_split(data, self.__split_ratio, self.__generator)
+        split_datasets = random_split(data, self.__split_ratio)
 
         if self.__stage == "train":
             dataset = split_datasets[0]
