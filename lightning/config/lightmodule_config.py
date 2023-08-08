@@ -5,9 +5,12 @@ with parameters for the configuration of the ``CardioLightningModule`` class.
 
 __all__ = ["LightningModuleParams"]
 
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Type, Any
+from pydantic import BaseModel, ConfigDict
 from torch.nn import Module
+from torch.optim.optimizer import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
+from torch.nn.modules.loss import _Loss
 
 
 class LightningModuleParams(BaseModel):
@@ -23,5 +26,10 @@ class LightningModuleParams(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    class_weights: Optional[list[float]] = Field(default=None, max_items=5, min_items=2)
-    model: Module
+    optimizer: Type[Optimizer]
+    optimizer_kwargs: dict
+    lr_scheduler: Type[LRScheduler] | Any
+    lr_scheduler_kwargs: dict
+    lr_scheduler_dict_kwargs: dict
+    criterion: Type[_Loss]
+    criterion_kwargs: dict

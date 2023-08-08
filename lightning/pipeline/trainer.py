@@ -7,10 +7,13 @@ building and logging the configurations of all modules and project packages.
 __all__ = ["LightTrainer"]
 
 from typing import Union, Optional, Any
+import warnings
 
 import pytorch_lightning as pl
+from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 import torch
+from torch.nn import Module
 
 from lightning.config import DatasetParams, ETLPipelineParams
 from lightning.config import DataModuleParams, LightningModuleParams
@@ -70,6 +73,7 @@ class LightTrainer:
                  dataset_config: DatasetParams,
                  etl_pipeline_config: ETLPipelineParams,
                  lightmodule_config: LightningModuleParams,
+                 model: Module,
                  name: str,
                  job_type: Optional[str] = None,
                  project: Optional[str] = "CardioSonix",
@@ -78,32 +82,39 @@ class LightTrainer:
                  **kwargs: Any
                  ):
 
-        self.model = lightmodule_config.model
         self.on_startup(seed)
 
         self.config = self.define_config(
-            datamodule_config, lightmodule_config,
-            etl_pipeline_config, dataset_config,
-            seed, kwargs
+            datamodule_config,
+            lightmodule_config,
+            etl_pipeline_config,
+            dataset_config,
+            seed,
+            kwargs
         )
 
-        self.logger = WandbLogger(
-            name=name, project=project,
+        self.__logger = WandbLogger(
+            name=name,
+            project=project,
             log_model=True,
             config=self.config,
-            job_type=job_type, tags=tags
+            job_type=job_type,
+            tags=tags
         )
 
-        self.datamodule = CardioDataModule(dataset_config, etl_pipeline_config, datamodule_config)
-        self.lightmodule = CardioLightningModule(lightmodule_config)
-        self.trainer = self.get_trainer(kwargs)
+        self.__datamodule = CardioDataModule(dataset_config, etl_pipeline_config, datamodule_config)
+        self.__lightmodule = CardioLightningModule(lightmodule_config, model)
+        self.__trainer = self.get_trainer(kwargs)
 
     @staticmethod
-    def define_config(datamodule_config,
-                      lightmodule_config,
-                      etl_pipeline_config,
-                      dataset_config,
-                      seed, kwargs) -> dict:
+    def define_config(
+            datamodule_config,
+            lightmodule_config,
+            etl_pipeline_config,
+            dataset_config,
+            seed,
+            kwargs
+    ) -> dict:
         """
         The method accepts arguments encapsulated in ``BaseModel`` subclasses
         that define module configuration and initialization.
@@ -121,14 +132,14 @@ class LightTrainer:
             "trainer_config": kwargs
         }
 
-    def get_trainer(self, kwargs):
+    def get_trainer(self, kwargs: dict) -> Trainer:
         """
         The method initializes the ``Trainer`` class from ``pytorch_lightning``,
         which takes hooks from callbacks module and also
         accepts any named arguments that were passed when initializing the ``LightTrainer`` class.
         """
-        return pl.Trainer(
-            logger=self.logger,
+        return Trainer(
+            logger=self.__logger,
             **kwargs
         )
 
@@ -137,9 +148,9 @@ class LightTrainer:
         The method initializes training.
         Takes an instance of the ``CardioDataModule`` and ``CardioLightningModule`` class.
         """
-        self.trainer.fit(
-            model=self.lightmodule,
-            datamodule=self.datamodule
+        self.__trainer.fit(
+            model=self.__lightmodule,
+            datamodule=self.__datamodule
         )
 
     @staticmethod
@@ -162,3 +173,4 @@ class LightTrainer:
         pl.seed_everything(seed)
         torch.set_float32_matmul_precision("medium")
         torch.cuda.empty_cache()
+        warnings.filterwarnings("ignore")

@@ -9,6 +9,7 @@ __all__ = ["CardioLightningModule"]
 import numpy as np
 import torch
 from torch import nn
+from torch import optim
 from torch.optim import lr_scheduler
 import pytorch_lightning as pl
 from .metrics import LightMetrics
@@ -24,16 +25,27 @@ class CardioLightningModule(pl.LightningModule):
         lightning_module_params: (LightningModuleParams) subclass of ``BaseModel``
             containing parameters (configuration) for ``CardioLightningModule`` initialization.
     """
-    def __init__(self, lightning_module_params: LightningModuleParams):
+    def __init__(self,
+                 lightning_module_params: LightningModuleParams,
+                 model: nn.Module
+                 ):
+
         super().__init__()
         self.save_hyperparameters()
-        self.model = lightning_module_params.model
+        self.model = model
         self.example_input_array = self.model.example_input_array
-        self.criterion = nn.CrossEntropyLoss(weight=lightning_module_params.class_weights)
+        self._optimizer = lightning_module_params.optimizer
+        self.optimizer_kwargs = lightning_module_params.optimizer_kwargs
+        self._lr_scheduler = lightning_module_params.lr_scheduler
+        self.lr_scheduler_kwargs = lightning_module_params.lr_scheduler_kwargs
+        self.lr_scheduler_dict_kwargs = lightning_module_params.lr_scheduler_dict_kwargs
+        self.criterion = lightning_module_params.criterion(**lightning_module_params.criterion_kwargs)
+
         self.loss_dict = {
             "train": [],
             "val": []
         }
+
         self.step_outputs = {
             "train": LightMetrics("train"),
             "val": LightMetrics("val")
@@ -69,18 +81,17 @@ class CardioLightningModule(pl.LightningModule):
         return self.shared_epoch_end(stage="val")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            params=self.parameters(),
-            lr=25e-3,
+        optimizer = self._optimizer(
+            self.parameters(),
+            **self.optimizer_kwargs
         )
 
         scheduler_dict = {
-            "scheduler": lr_scheduler.ReduceLROnPlateau(
+            "scheduler": self._lr_scheduler(
                 optimizer=optimizer,
-                patience=5
+                **self.lr_scheduler_kwargs
             ),
-            "interval": "epoch",
-            "monitor": "train/accuracy"
+            **self.lr_scheduler_dict_kwargs
         }
 
         return {

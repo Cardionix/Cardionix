@@ -18,5 +18,5 @@ class DataModuleParams(BaseModel):
         num_workers: how many subprocesses to use for data loading (default: 2).
             0 means that the data will be loaded in the main process.
     """
-    batch_size: Optional[int] = Field(default=2, gt=0)
+    batch_size: Optional[int] = Field(default=4, gt=0)
     num_workers: Optional[int] = Field(default=2, gt=0)

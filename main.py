@@ -2,7 +2,11 @@
 Docstring
 """
 
+from torch import nn
+from torch import optim
+from torch.optim import lr_scheduler
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+
 from lightning import LightTrainer
 from lightning.models import BaselineRNNModel
 from lightning.config import DatasetParams, ETLPipelineParams
@@ -29,13 +33,22 @@ def main(
         EarlyStopping(
             monitor="val/loss",
             mode="min",
-            patience=5,
+            patience=6,
             min_delta=1e-5,
         )
     ]
 
+    model = BaselineRNNModel(
+        input_shape=(1, 52),
+        encoder_depth=[2048, 1024, 512],
+        rnn_depth=[256, 128],
+        decoder_depth=[64, 32, 5],
+        activation="relu",
+    )
+
     trainer = LightTrainer(
         # Module configurations
+        model=model,
         datamodule_config=datamodule_config,
         dataset_config=dataset_config,
         etl_pipeline_config=etl_pipeline_config,
@@ -53,8 +66,8 @@ def main(
         enable_model_summary=True,
         enable_progress_bar=True,
         fast_dev_run=False,
-        max_epochs=2,
-        min_epochs=1,
+        max_epochs=50,
+        min_epochs=5,
         num_nodes=1,
         strategy="auto"
     )
@@ -63,14 +76,6 @@ def main(
 
 
 if __name__ == "__main__":
-    model = BaselineRNNModel(
-        input_shape=(52, 216),
-        encoder_depth=[2048, 1024, 512],
-        rnn_depth=[256, 128],
-        decoder_depth=[64, 32, 5],
-        activation="relu",
-    )
-
     dataset_params = DatasetParams(
         audio_dirpath="./data/audio",
         labels_filepath="./data/labels.csv",
@@ -88,18 +93,32 @@ if __name__ == "__main__":
             "hop_length": 1024,
             "n_mels": 52,
             "n_mfcc": 52,
-            "average_by": None
+            "average_by": "time"
         }
     )
 
     datamodule_params = DataModuleParams(
-        batch_size=32,
+        batch_size=20,
         num_workers=12
     )
 
     lightmodule_params = LightningModuleParams(
-        model=model,
-        class_weights=None
+        optimizer=optim.Adam,
+        optimizer_kwargs={
+            "lr": 1e-4
+        },
+        lr_scheduler=lr_scheduler.ReduceLROnPlateau,
+        lr_scheduler_kwargs={
+            "patience": 3
+        },
+        lr_scheduler_dict_kwargs={
+            "monitor": "val/loss",
+            "interval": "epoch"
+        },
+        criterion=nn.CrossEntropyLoss,
+        criterion_kwargs={
+            "weight": None
+        }
     )
 
     main(
