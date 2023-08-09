@@ -15,10 +15,10 @@ from pytorch_lightning.loggers import WandbLogger
 import torch
 from torch.nn import Module
 
-from lightning.config import DatasetParams, ETLPipelineParams
-from lightning.config import DataModuleParams, LightningModuleParams
-from lightning.pipeline.datamodule import CardioDataModule
-from lightning.pipeline.lightmodule import CardioLightningModule
+from cardiosonix.configs import DatasetParams, ETLPipelineParams
+from cardiosonix.configs import DataModuleParams, LightningModuleParams
+from cardiosonix.sonixcore.datamodule import CardioDataModule
+from cardiosonix.sonixcore.lightmodule import CardioLightningModule
 
 
 class LightTrainer:
@@ -76,7 +76,7 @@ class LightTrainer:
                  model: Module,
                  name: str,
                  job_type: Optional[str] = None,
-                 project: Optional[str] = "CardioSonix",
+                 project: Optional[str] = "Cardio Sonix",
                  tags: Optional[Union[list, tuple]] = None,
                  seed: Optional[int] = 42,
                  **kwargs: Any

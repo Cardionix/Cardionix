@@ -8,8 +8,8 @@ __all__ = ["CardioDataModule"]
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from .datasets import CardioAnomalyDataset
-from ..config import DatasetParams, ETLPipelineParams, DataModuleParams
+from cardiosonix.pipeline.datasets import CardioAnomalyDataset
+from cardiosonix.configs import DatasetParams, ETLPipelineParams, DataModuleParams
 
 
 class CardioDataModule(pl.LightningDataModule):
@@ -63,17 +63,11 @@ class CardioDataModule(pl.LightningDataModule):
         self.__etl_pipeline_params = etl_pipeline_params
 
         self.__num_subsets = len(self.__dataset_params.split_ratio)
-        self.__data_source = "https://www.kaggle.com/datasets/mersico/dangerous-heartbeat-dataset-dhd"
+        self.data_source = "https://www.kaggle.com/datasets/mersico/dangerous-heartbeat-dataset-dhd"
 
         self.__data_train = None
         self.__data_val = None
         self.__data_test = None
-
-    def prepare_data(self) -> None:
-        print(
-            f"Warning! This method does not load the data to process it. "
-            f"You have to download the data yourself. Data source: {self.__data_source}"
-        )
 
     def setup(self, stage: str = None) -> None:
 

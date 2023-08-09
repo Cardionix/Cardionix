@@ -9,7 +9,7 @@ from typing import Literal, Any, Optional
 import torch
 from torch.nn import Module
 
-from lightning.config import ETLPipelineParams
+from cardiosonix.configs import ETLPipelineParams
 from .extractors import MFCCExtractor
 from .preprocessing import Upload
 

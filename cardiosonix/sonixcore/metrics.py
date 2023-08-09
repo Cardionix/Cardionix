@@ -1,13 +1,14 @@
 """
-Contains a data structure ``MetricsStorage`` for accumulating predictions (probabilities)
-for a certain number of training iterations and a ``LightMetrics`` class
+Contains a data structure ``ProbaStorage`` for accumulating predictions (probabilities)
+for a certain number of training iterations and a ``CardioMetrics`` class
 that inherits the ability to accumulate predictions
 and calculate metrics for their subsequent logging.
 """
 
-__all__ = ["LightMetrics"]
+__all__ = ["CardioMetrics"]
 
-from typing import Union, Literal
+from typing import Union, Literal, Optional
+import warnings
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -15,10 +16,39 @@ from sklearn.metrics import classification_report, fbeta_score, roc_auc_score
 
 
 class MetricsStorage:
+    def __init__(self,
+                 stage: Literal["train", "val", "test"],
+                 metrics: Optional[Union[list[str, ...], tuple[str, ...]]] = None
+                 ):
+
+        self.stage = stage
+        self.list_metrics = list(map(lambda name: f"{stage}/{name}", metrics))
+        self.metrics = {}.fromkeys(self.list_metrics, [])
+
+    def __len__(self) -> int:
+        return sum(map(len, self.metrics.values()))
+
+    def clear(self) -> None:
+        self.metrics = {}.fromkeys(self.list_metrics, [])
+
+    def average(self, axis: Optional[int] = 0) -> dict:
+        return {key: np.mean(value, axis=axis) for key, value in self.metrics.items()}
+
+    def append(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            if isinstance(value, torch.Tensor):
+                value = float(value.detach().cpu())
+            key = f"{self.stage}/{key}"
+            if key in self.metrics.keys():
+                self.metrics[key].append(value)
+
+
+class ProbaStorage:
     """
     A data structure ``MetricsStorage`` for accumulating predictions
     for a certain number of training iterations
     """
+
     def __init__(self):
         self.__y_prob = np.array([], dtype=np.float32)
         self.__y_true = np.array([], dtype=np.int8)
@@ -29,7 +59,7 @@ class MetricsStorage:
     def __getitem__(self, idx: int) -> tuple[np.ndarray, np.ndarray]:
         return self.__y_prob[idx], self.__y_true[idx].ravel()
 
-    def append(self, value: Union[list[np.ndarray | torch.Tensor] | tuple[np.ndarray | torch.Tensor]]):
+    def _append(self, value: Union[list[np.ndarray | torch.Tensor] | tuple[np.ndarray | torch.Tensor]]):
         """
         The method concatenates model predictions (probabilities) and true class labels
         into two pre-existing arrays to accumulate class labels and model predictions on each call.
@@ -88,7 +118,7 @@ class MetricsStorage:
         ]
 
 
-class LightMetrics(MetricsStorage):
+class CardioMetrics(ProbaStorage):
     """
     Inherits the ability to accumulate predictions
     and calculate metrics for their subsequent logging.
@@ -110,10 +140,12 @@ class LightMetrics(MetricsStorage):
             Asymptotically, beta -> +inf considers only recall, and beta -> 0 only precision.
             By default beta is 1.10.
     """
+
     def __init__(self,
                  stage: Literal["train", "val", "test"],
                  from_logites: bool = True,
                  beta: float = 1.10,
+                 external_metrics: Optional[Union[list[str, ...], tuple[str, ...]]] = None,
                  ):
 
         super().__init__()
@@ -121,17 +153,19 @@ class LightMetrics(MetricsStorage):
         self.beta = beta
         self.from_logites = from_logites
         self.stage = stage
+        self.external_metrics = MetricsStorage(stage, external_metrics) if external_metrics else None
 
-    def define_metrics(self,
-                       roc_auc: float,
-                       fb_score: float,
-                       class_report: dict
-                       ) -> dict:
+    def __define_metrics(self,
+                         roc_auc: float,
+                         fb_score: float,
+                         class_report: dict,
+                         ) -> dict:
         """
         This method takes as input a set of metrics, which are dictionaries.
         Each metric gets a new key, according to its logging stage (train, val, test).
         A dictionary is returned that contains all computed metrics with new keys.
         """
+
         report = {
             f"{self.stage}/fbeta_score": fb_score,
             f"{self.stage}/roc_auc": roc_auc
@@ -147,6 +181,16 @@ class LightMetrics(MetricsStorage):
             else:
                 report[f"{self.stage}/{key}"] = item
         return report
+
+    def add(self, **kwargs):
+        if self.external_metrics != None:
+            self.external_metrics.append(**kwargs)
+        else:
+            raise RuntimeError(
+                "The external metrics argument was not passed "
+                "during initialization due to which the storage "
+                "for external metrics was not created"
+            )
 
     def accumulate(self, y_prob: torch.Tensor, y_true: torch.Tensor) -> None:
         """
@@ -167,7 +211,7 @@ class LightMetrics(MetricsStorage):
         """
         if self.from_logites:
             y_prob = F.softmax(y_prob, dim=1)
-        self.append([y_prob, y_true])
+        self._append([y_prob, y_true])
 
     def compute_metrics(self) -> dict:
         """
@@ -182,5 +226,9 @@ class LightMetrics(MetricsStorage):
         roc_auc = roc_auc_score(y_true, y_prob, multi_class="ovo")
         fb_score = fbeta_score(y_true, y_pred, beta=self.beta, average="micro")
         class_report = classification_report(y_true, y_pred, output_dict=True)
-        metrics = self.define_metrics(roc_auc, fb_score, class_report)
+        metrics = self.__define_metrics(roc_auc, fb_score, class_report)
+
+        if self.external_metrics != None:
+            metrics.update(self.external_metrics.average())
+            self.external_metrics.clear()
         return metrics
