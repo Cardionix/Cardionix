@@ -17,8 +17,8 @@ from torch.utils.data import random_split
 
 import pandas as pd
 
-from lightning.config import DatasetParams, ETLPipelineParams
-from ..etl_pipeline import ETLPipeline
+from cardiosonix.configs import DatasetParams, ETLPipelineParams
+from ..transforms import ETLPipeline
 
 
 class CardioAnomalyDataset(Dataset):

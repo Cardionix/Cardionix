@@ -89,5 +89,6 @@ Packages:
     pipeline - machine learning pipeline with metrics, datasets, feature extraction, and experiment logging.
 """
 
-from .pipeline import *
+from .configs import *
 from .models import *
+from .trainer import *

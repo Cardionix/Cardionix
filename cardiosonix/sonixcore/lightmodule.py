@@ -6,14 +6,11 @@ This class also logs metrics and changes its behavior depending on callbaks.
 
 __all__ = ["CardioLightningModule"]
 
-import numpy as np
 import torch
 from torch import nn
-from torch import optim
-from torch.optim import lr_scheduler
 import pytorch_lightning as pl
-from .metrics import LightMetrics
-from lightning.config import LightningModuleParams
+from .metrics import CardioMetrics
+from ..configs import LightningModuleParams
 
 
 class CardioLightningModule(pl.LightningModule):
@@ -40,15 +37,9 @@ class CardioLightningModule(pl.LightningModule):
         self.lr_scheduler_kwargs = lightning_module_params.lr_scheduler_kwargs
         self.lr_scheduler_dict_kwargs = lightning_module_params.lr_scheduler_dict_kwargs
         self.criterion = lightning_module_params.criterion(**lightning_module_params.criterion_kwargs)
-
-        self.loss_dict = {
-            "train": [],
-            "val": []
-        }
-
         self.step_outputs = {
-            "train": LightMetrics("train"),
-            "val": LightMetrics("val")
+            "train": CardioMetrics("train", external_metrics=["loss"]),
+            "val": CardioMetrics("val", external_metrics=["loss"])
         }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -59,13 +50,11 @@ class CardioLightningModule(pl.LightningModule):
         logites = self.forward(x.to(torch.float32))
         loss = self.criterion(logites, y.to(torch.int64))
         self.step_outputs[stage].accumulate(logites, y)
-        self.loss_dict[stage].append(loss)
+        self.step_outputs[stage].add(loss=loss)
         return loss
 
     def shared_epoch_end(self, stage: str) -> None:
         metrics = self.step_outputs[stage].compute_metrics()
-        metrics[f"{stage}/loss"] = torch.stack(self.loss_dict[stage]).mean()
-        self.loss_dict[stage].clear()
         self.log_dict(metrics, prog_bar=True, logger=True, on_epoch=True)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> None:

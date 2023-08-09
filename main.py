@@ -1,16 +1,16 @@
 """
 Docstring
 """
-
+import torch
 from torch import nn
 from torch import optim
 from torch.optim import lr_scheduler
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
-from lightning import LightTrainer
-from lightning.models import BaselineRNNModel
-from lightning.config import DatasetParams, ETLPipelineParams
-from lightning.config import DataModuleParams, LightningModuleParams
+from cardiosonix import LightTrainer
+from cardiosonix.models import BaselineRNNModel
+from cardiosonix.configs import DatasetParams, ETLPipelineParams
+from cardiosonix.configs import DataModuleParams, LightningModuleParams
 
 
 def main(
@@ -23,17 +23,17 @@ def main(
     callbacks = [
         ModelCheckpoint(
             dirpath="./checkpoints",
-            filename="epoch={epoch}-val_los={val/loss:.2f}",
-            monitor="val/loss",
-            mode="min",
-            save_top_k=5,
+            filename="epoch={epoch}-val_los={val/loss:.2f}-val_roc_auc={val/roc_auc:.2f}",
+            monitor="val/roc_auc",
+            mode="max",
+            save_top_k=10,
             auto_insert_metric_name=False
         ),
 
         EarlyStopping(
-            monitor="val/loss",
-            mode="min",
-            patience=6,
+            monitor="val/roc_auc",
+            mode="max",
+            patience=8,
             min_delta=1e-5,
         )
     ]
@@ -54,20 +54,21 @@ def main(
         etl_pipeline_config=etl_pipeline_config,
         lightmodule_config=lightmodule_config,
         # Logging configuration
-        job_type="training",
-        name="test_run",
-        tags=None,
+        job_type="research",
+        name="experiment with weighted loss",
+        tags=["weighted loss", "training"],
         # Global seed
         seed=42,
         # pl.Trainer kwargs
+        log_every_n_steps=20,
         callbacks=callbacks,
         accelerator="auto",
         devices="auto",
         enable_model_summary=True,
         enable_progress_bar=True,
         fast_dev_run=False,
-        max_epochs=50,
-        min_epochs=5,
+        max_epochs=100,
+        min_epochs=10,
         num_nodes=1,
         strategy="auto"
     )
@@ -117,7 +118,7 @@ if __name__ == "__main__":
         },
         criterion=nn.CrossEntropyLoss,
         criterion_kwargs={
-            "weight": None
+            "weight": torch.tensor([0.23, 0.61, 2.16, 1.14, 1.53])
         }
     )
 
