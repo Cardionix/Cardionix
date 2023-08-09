@@ -4,5 +4,5 @@ feature extraction and data augmentation, assembly and logging of configurations
 as well as management of the training loop, calculation and logging of metrics.
 """
 
-from .trainer import *
-
+from .datasets import *
+from .transforms import *

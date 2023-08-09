@@ -10,7 +10,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 from .metrics import CardioMetrics
-from cardiosonix.configs import LightningModuleParams
+from ..configs import LightningModuleParams
 
 
 class CardioLightningModule(pl.LightningModule):

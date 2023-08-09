@@ -18,7 +18,7 @@ from torch.utils.data import random_split
 import pandas as pd
 
 from cardiosonix.configs import DatasetParams, ETLPipelineParams
-from ..etl_pipeline import ETLPipeline
+from ..transforms import ETLPipeline
 
 
 class CardioAnomalyDataset(Dataset):

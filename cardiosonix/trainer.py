@@ -15,10 +15,10 @@ from pytorch_lightning.loggers import WandbLogger
 import torch
 from torch.nn import Module
 
-from cardiosonix.configs import DatasetParams, ETLPipelineParams
-from cardiosonix.configs import DataModuleParams, LightningModuleParams
-from cardiosonix.sonixcore.datamodule import CardioDataModule
-from cardiosonix.sonixcore.lightmodule import CardioLightningModule
+from .configs import DatasetParams, ETLPipelineParams
+from .configs import DataModuleParams, LightningModuleParams
+from .sonixcore import CardioDataModule
+from .sonixcore import CardioLightningModule
 
 
 class LightTrainer:

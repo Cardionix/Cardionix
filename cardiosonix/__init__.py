@@ -90,5 +90,5 @@ Packages:
 """
 
 from .configs import *
-from .pipeline import *
 from .models import *
+from .trainer import *
