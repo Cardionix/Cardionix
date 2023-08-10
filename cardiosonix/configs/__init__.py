@@ -22,7 +22,7 @@ Where:
     ``num_workers`` -- number of threads used when loading data.
 """
 
-from .dataset_config import *
+from .datasets import *
 from .datamodule_config import *
-from .etl_pipeline_config import *
+from .transforms_config import *
 from .lightmodule_config import *

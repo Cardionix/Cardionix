@@ -8,7 +8,7 @@ thanks to the ETLPipeline class that is integrated into it.
 
 __all__ = ["CardioAnomalyDataset"]
 
-from typing import Literal
+from typing import Literal, Union, Any
 import os
 
 import torch
@@ -17,7 +17,7 @@ from torch.utils.data import random_split
 
 import pandas as pd
 
-from cardiosonix.configs import DatasetParams, ETLPipelineParams
+from cardiosonix.configs import ClassifyDatasetParams, ETLPipelineParams
 from ..transforms import ETLPipeline
 
 
@@ -38,7 +38,7 @@ class CardioAnomalyDataset(Dataset):
 
     """
     def __init__(self,
-                 dataset_params: DatasetParams,
+                 dataset_params: Union[ClassifyDatasetParams, Any],
                  etl_pipeline_params: ETLPipelineParams,
                  stage: Literal["train", "val", "test"]
                  ):
@@ -46,17 +46,13 @@ class CardioAnomalyDataset(Dataset):
         self.__stage = self.check_stage(stage)
         self.__split_ratio = dataset_params.split_ratio
         self.__audio_dirpath = dataset_params.audio_dirpath
+
         self.__labels_df = pd.read_csv(dataset_params.labels_filepath)
+        self.__labels_encoding = {}
+        self.define_classes(dataset_params.classes)
+
         self.__transforms = ETLPipeline(etl_pipeline_params)
         self.__dataset = self.split_dataset()
-
-        self.__classes_dict = {
-            "normal": 0,
-            "murmur": 1,
-            "extrahls": 2,
-            "extrastole": 3,
-            "artifact": 4,
-        }
 
     def __len__(self) -> int:
         return len(self.__dataset)
@@ -65,8 +61,13 @@ class CardioAnomalyDataset(Dataset):
         filename, label = self.__dataset[idx]
         filepath = os.path.join(self.__audio_dirpath, filename)
         waveform = self.__transforms(filepath)
-        label = self.__classes_dict[label]
+        label = self.__labels_encoding[label]
         return waveform, torch.tensor(label, dtype=torch.int32)
+
+    def define_classes(self, classes) -> None:
+        for i, (key, item) in enumerate(classes.items()):
+            self.__labels_df["label"] = self.__labels_df["label"].replace(item, key)
+            self.__labels_encoding[key] = i
 
     def split_dataset(self) -> Subset:
         """

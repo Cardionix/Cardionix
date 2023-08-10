@@ -15,7 +15,7 @@ from pytorch_lightning.loggers import WandbLogger
 import torch
 from torch.nn import Module
 
-from .configs import DatasetParams, ETLPipelineParams
+from .configs import ClassifyDatasetParams, ETLPipelineParams
 from .configs import DataModuleParams, LightningModuleParams
 from .sonixcore import CardioDataModule
 from .sonixcore import CardioLightningModule
@@ -70,7 +70,7 @@ class LightTrainer:
     """
     def __init__(self,
                  datamodule_config: DataModuleParams,
-                 dataset_config: DatasetParams,
+                 dataset_config: Union[ClassifyDatasetParams, Any],
                  etl_pipeline_config: ETLPipelineParams,
                  lightmodule_config: LightningModuleParams,
                  model: Module,
@@ -103,7 +103,7 @@ class LightTrainer:
         )
 
         self.__datamodule = CardioDataModule(dataset_config, etl_pipeline_config, datamodule_config)
-        self.__lightmodule = CardioLightningModule(lightmodule_config, model)
+        self.__lightmodule = CardioLightningModule(lightmodule_config, model, dataset_config.classes)
         self.__trainer = self.get_trainer(kwargs)
 
     @staticmethod
@@ -149,6 +149,12 @@ class LightTrainer:
         Takes an instance of the ``CardioDataModule`` and ``CardioLightningModule`` class.
         """
         self.__trainer.fit(
+            model=self.__lightmodule,
+            datamodule=self.__datamodule
+        )
+
+    def predict(self):
+        self.__trainer.predict(
             model=self.__lightmodule,
             datamodule=self.__datamodule
         )

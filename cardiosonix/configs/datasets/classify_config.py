@@ -3,14 +3,14 @@ Contains a ``DatasetParams`` class
 with parameters for ``CardioAnomalyDataset`` configuration.
 """
 
-__all__ = ["DatasetParams"]
+__all__ = ["ClassifyDatasetParams"]
 
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic import FilePath, DirectoryPath, Field
 
 
-class DatasetParams(BaseModel):
+class ClassifyDatasetParams(BaseModel):
     """
     Сlass with parameters for ``CardioAnomalyDataset`` configuration.
 
@@ -32,7 +32,12 @@ class DatasetParams(BaseModel):
 
     audio_dirpath: DirectoryPath
     labels_filepath: FilePath
-    split_ratio: list[float] = Field(default=[0.75, 0.25], max_items=3, min_items=2)
+    split_ratio: list[float] = Field(default=[0.80, 0.20], max_items=3, min_items=2)
+    classes: Optional[dict] = {
+        "artifact": ["artifact"],
+        "healthy": ["normal"],
+        "abnormal": ["murmur", "extrahls", "extrastole"]
+    }
 
     @field_validator("labels_filepath")
     def labels_filepath_validator(cls, value):

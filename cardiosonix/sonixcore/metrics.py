@@ -8,11 +8,13 @@ and calculate metrics for their subsequent logging.
 __all__ = ["CardioMetrics"]
 
 from typing import Union, Literal, Optional
-import warnings
+from colorama import Fore
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sklearn.metrics import classification_report, fbeta_score, roc_auc_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import fbeta_score, roc_auc_score, classification_report
+import matplotlib.pyplot as plt
 
 
 class MetricsStorage:
@@ -143,17 +145,28 @@ class CardioMetrics(ProbaStorage):
 
     def __init__(self,
                  stage: Literal["train", "val", "test"],
+                 classes: Union[list[str, ...], tuple[str, ...]],
                  from_logites: bool = True,
                  beta: float = 1.10,
                  external_metrics: Optional[Union[list[str, ...], tuple[str, ...]]] = None,
                  ):
 
         super().__init__()
-        self.classes = ("normal", "murmur", "extrahls", "extrastole", "artifact")
+        self.classes = classes
         self.beta = beta
         self.from_logites = from_logites
         self.stage = stage
         self.external_metrics = MetricsStorage(stage, external_metrics) if external_metrics else None
+
+    def __getitem__(self, idx: int):
+        y_prob, y_true = super().__getitem__(idx)
+        y_pred = np.argmax(y_prob, axis=1).astype(dtype=np.int8)
+        self.clear()
+        return {
+            "y_prob": y_prob,
+            "y_pred": y_pred,
+            "y_true": y_true
+        }
 
     def __define_metrics(self,
                          roc_auc: float,
@@ -213,19 +226,45 @@ class CardioMetrics(ProbaStorage):
             y_prob = F.softmax(y_prob, dim=1)
         self._append([y_prob, y_true])
 
+    def __label_decoding(self, y_true: np.ndarray, y_pred: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        y_pred = list(map(lambda x: self.classes[x], y_pred))
+        y_true = list(map(lambda x: self.classes[x], y_true))
+        return y_true, y_pred
+
+    @staticmethod
+    def __print_predictions(y_true: np.ndarray, y_pred: np.ndarray) -> None:
+        for true, pred in zip(y_true, y_pred):
+            color = Fore.RED if pred != true else Fore.GREEN
+            print(color+f"Predicted: {pred}, True: {true}")
+
+    def make_report(self):
+        outputs = self[:]
+        y_true, y_pred = self.__label_decoding(outputs["y_true"], outputs["y_pred"])
+
+        print(Fore.CYAN + "\n\t|| Prediction Report ||")
+        self.__print_predictions(y_true, y_pred)
+
+        report = classification_report(y_true, y_pred)
+        print(Fore.CYAN + "\n" + "\t"*4 + "|| Classification Report ||")
+        print(Fore.YELLOW + f"\n{report}\n" + Fore.WHITE)
+
+        ConfusionMatrixDisplay(
+            confusion_matrix(y_true, y_pred, labels=self.classes),
+            display_labels=self.classes
+        ).plot()
+        plt.show()
+
     def compute_metrics(self) -> dict:
         """
         Calculates the metrics from the accumulated array of probabilities
         and the corresponding array with class labels for each set of probabilities.
         Values accumulated over N iterations are averaged
         """
-        y_prob, y_true = self[:]
-        y_pred = np.argmax(y_prob, axis=1).astype(dtype=np.int8)
-        self.clear()
+        outputs = self[:]
 
-        roc_auc = roc_auc_score(y_true, y_prob, multi_class="ovo")
-        fb_score = fbeta_score(y_true, y_pred, beta=self.beta, average="micro")
-        class_report = classification_report(y_true, y_pred, output_dict=True)
+        roc_auc = roc_auc_score(outputs["y_true"], outputs["y_prob"], multi_class="ovo")
+        fb_score = fbeta_score(outputs["y_true"], outputs["y_pred"], beta=self.beta, average="micro")
+        class_report = classification_report(outputs["y_true"], outputs["y_pred"], output_dict=True)
         metrics = self.__define_metrics(roc_auc, fb_score, class_report)
 
         if self.external_metrics != None:
