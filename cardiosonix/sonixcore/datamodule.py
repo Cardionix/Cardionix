@@ -5,11 +5,13 @@ which initializes the ``CardioAnomalyDataset`` and issues a Dataloader depending
 
 __all__ = ["CardioDataModule"]
 
+from typing import Union, Any
+
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
 from ..pipeline import CardioAnomalyDataset
-from ..configs import DatasetParams, ETLPipelineParams, DataModuleParams
+from ..configs import ClassifyDatasetParams, ETLPipelineParams, DataModuleParams
 
 
 class CardioDataModule(pl.LightningDataModule):
@@ -53,7 +55,7 @@ class CardioDataModule(pl.LightningDataModule):
             containing parameters (configuration) for ``ETLPipeline`` initialization.
     """
     def __init__(self,
-                 dataset_params: DatasetParams,
+                 dataset_params: Union[ClassifyDatasetParams, Any],
                  etl_pipeline_params: ETLPipelineParams,
                  datamodule_params: DataModuleParams,
                  ):
@@ -117,3 +119,7 @@ class CardioDataModule(pl.LightningDataModule):
             shuffle=False,
             pin_memory=True
         )
+
+    def predict_dataloader(self) -> DataLoader:
+        return self.test_dataloader() if self.__num_subsets == 3  else self.val_dataloader()
+    
