@@ -1,6 +1,7 @@
 """
 Docstring
 """
+
 import torch
 from torch import nn
 from torch import optim
@@ -9,12 +10,12 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from cardiosonix import LightTrainer
 from cardiosonix.models import BaselineRNNModel
-from cardiosonix.configs import DatasetParams, ETLPipelineParams
+from cardiosonix.configs import ClassifyDatasetParams, ETLPipelineParams
 from cardiosonix.configs import DataModuleParams, LightningModuleParams
 
 
 def main(
-        dataset_config: DatasetParams,
+        dataset_config: ClassifyDatasetParams,
         datamodule_config: DataModuleParams,
         etl_pipeline_config: ETLPipelineParams,
         lightmodule_config: LightningModuleParams
@@ -42,7 +43,7 @@ def main(
         input_shape=(1, 52),
         encoder_depth=[2048, 1024, 512],
         rnn_depth=[256, 128],
-        decoder_depth=[64, 32, 5],
+        decoder_depth=[64, 32, 3],
         activation="relu",
     )
 
@@ -54,9 +55,9 @@ def main(
         etl_pipeline_config=etl_pipeline_config,
         lightmodule_config=lightmodule_config,
         # Logging configuration
-        job_type="research",
-        name="experiment with weighted loss",
-        tags=["weighted loss", "training"],
+        job_type="feat",
+        name="test run",
+        tags=["new feat", "functional"],
         # Global seed
         seed=42,
         # pl.Trainer kwargs
@@ -73,14 +74,19 @@ def main(
         strategy="auto"
     )
 
-    trainer.fit()
+    trainer.predict()
 
 
 if __name__ == "__main__":
-    dataset_params = DatasetParams(
+    dataset_params = ClassifyDatasetParams(
         audio_dirpath="./data/audio",
         labels_filepath="./data/labels.csv",
         split_ratio=[0.80, 0.20],
+        classes={
+            "artifact": ["artifact"],
+            "healthy": ["normal"],
+            "abnormal": ["murmur", "extrahls", "extrastole"]
+        }
     )
 
     etl_pipeline_params = ETLPipelineParams(
