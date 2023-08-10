@@ -6,8 +6,10 @@ This class also logs metrics and changes its behavior depending on callbaks.
 
 __all__ = ["CardioLightningModule"]
 
+from typing import Any
 import torch
 from torch import nn
+import torch.nn.functional as F
 import pytorch_lightning as pl
 from .metrics import CardioMetrics
 from ..configs import LightningModuleParams
@@ -24,7 +26,8 @@ class CardioLightningModule(pl.LightningModule):
     """
     def __init__(self,
                  lightning_module_params: LightningModuleParams,
-                 model: nn.Module
+                 model: nn.Module,
+                 classes: dict
                  ):
 
         super().__init__()
@@ -37,9 +40,11 @@ class CardioLightningModule(pl.LightningModule):
         self.lr_scheduler_kwargs = lightning_module_params.lr_scheduler_kwargs
         self.lr_scheduler_dict_kwargs = lightning_module_params.lr_scheduler_dict_kwargs
         self.criterion = lightning_module_params.criterion(**lightning_module_params.criterion_kwargs)
+        self.classes = list(classes.keys())
         self.step_outputs = {
-            "train": CardioMetrics("train", external_metrics=["loss"]),
-            "val": CardioMetrics("val", external_metrics=["loss"])
+            "train": CardioMetrics(classes=self.classes, stage="train", external_metrics=["loss"]),
+            "val": CardioMetrics(classes=self.classes, stage="val", external_metrics=["loss"]),
+            "predict": CardioMetrics(classes=self.classes, stage="predict")
         }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -68,6 +73,14 @@ class CardioLightningModule(pl.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         return self.shared_epoch_end(stage="val")
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> dict:
+        x, y = batch
+        logites = self.forward(x.to(torch.float32))
+        self.step_outputs["predict"].accumulate(logites, y)
+
+    def on_predict_epoch_end(self) -> None:
+        self.step_outputs["predict"].make_report()
 
     def configure_optimizers(self):
         optimizer = self._optimizer(
