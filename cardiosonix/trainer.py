@@ -17,8 +17,8 @@ from torch.nn import Module
 
 from .configs import ClassifyDatasetParams, ETLPipelineParams
 from .configs import DataModuleParams, LightningModuleParams
-from .sonixcore import CardioDataModule
-from .sonixcore import CardioLightningModule
+from .engine import CardioDataModule
+from .engine import CardioLightningModule
 
 
 class LightTrainer:
