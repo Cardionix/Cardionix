@@ -31,7 +31,9 @@ class ClassifyDatasetParams(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     audio_dirpath: DirectoryPath
+    extra_filepath: Optional[FilePath] = None
     labels_filepath: FilePath
+    metadata_filepath: Optional[FilePath] = None
     split_ratio: list[float] = Field(default=[0.80, 0.20], max_items=3, min_items=2)
     classes: Optional[dict] = {
         "artifact": ["artifact"],
@@ -39,14 +41,15 @@ class ClassifyDatasetParams(BaseModel):
         "abnormal": ["murmur", "extrahls", "extrastole"]
     }
 
-    @field_validator("labels_filepath")
-    def labels_filepath_validator(cls, value):
-        extension = str(value).rsplit(".", maxsplit=1)[-1]
-        if extension != "csv":
-            raise ValueError(
-                f"The file with an annotation of audio file classes "
-                f"must have the extension .csv, but received {extension}"
-            )
+    @field_validator("extra_filepath", "labels_filepath", "metadata_filepath")
+    def filepath_validator(cls, value):
+        if value:
+            extension = str(value).rsplit(".", maxsplit=1)[-1]
+            if extension != "csv":
+                raise ValueError(
+                    f"The file with an annotation of audio file classes "
+                    f"must have the extension .csv, but received {extension}"
+                )
         return value
 
     @field_validator("split_ratio")
