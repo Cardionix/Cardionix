@@ -5,9 +5,10 @@ which initializes the ``CardioAnomalyDataset`` and issues a Dataloader depending
 
 __all__ = ["CardioDataModule"]
 
-from typing import Union, Any
+from typing import Union, Any, Optional
 
 import pytorch_lightning as pl
+import torch
 from torch.utils.data import DataLoader
 
 from ..pipeline import CardioAnomalyDataset
@@ -58,6 +59,7 @@ class CardioDataModule(pl.LightningDataModule):
                  dataset_params: Union[ClassifyDatasetParams, Any],
                  etl_pipeline_params: ETLPipelineParams,
                  datamodule_params: DataModuleParams,
+                 seed: Optional[int] = 42
                  ):
         super().__init__()
         self.__dataset_params = dataset_params
@@ -66,31 +68,39 @@ class CardioDataModule(pl.LightningDataModule):
 
         self.__num_subsets = len(self.__dataset_params.split_ratio)
         self.data_source = "https://www.kaggle.com/datasets/mersico/dangerous-heartbeat-dataset-dhd"
+        self.__seed = seed
 
         self.__data_train = None
         self.__data_val = None
         self.__data_test = None
+
+    @property
+    def generator(self) -> torch.Generator:
+        return torch.Generator().manual_seed(self.__seed)
 
     def setup(self, stage: str = None) -> None:
 
         self.__data_train = CardioAnomalyDataset(
             self.__dataset_params,
             self.__etl_pipeline_params,
-            stage="train"
+            stage="train",
+            generator=self.generator
         )
 
         if self.__num_subsets >= 2:
             self.__data_val = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
-                stage="val"
+                stage="val",
+                generator=self.generator
             )
 
         if self.__num_subsets == 3:
             self.__data_test = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
-                stage="test"
+                stage="test",
+                generator=self.generator
             )
 
     def train_dataloader(self) -> DataLoader:

@@ -102,8 +102,19 @@ class LightTrainer:
             tags=tags
         )
 
-        self.__datamodule = CardioDataModule(dataset_config, etl_pipeline_config, datamodule_config)
-        self.__lightmodule = CardioLightningModule(lightmodule_config, model, dataset_config.classes)
+        self.__datamodule = CardioDataModule(
+            dataset_config,
+            etl_pipeline_config,
+            datamodule_config,
+            seed=seed
+        )
+
+        self.__lightmodule = CardioLightningModule(
+            lightmodule_config,
+            model,
+            dataset_config.classes
+        )
+
         self.__trainer = self.get_trainer(kwargs)
 
     @staticmethod
