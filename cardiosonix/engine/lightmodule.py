@@ -27,7 +27,7 @@ class CardioLightningModule(pl.LightningModule):
     def __init__(self,
                  lightning_module_params: LightningModuleParams,
                  model: nn.Module,
-                 classes: dict
+                 classes: tuple
                  ):
 
         super().__init__()
@@ -40,7 +40,7 @@ class CardioLightningModule(pl.LightningModule):
         self.lr_scheduler_kwargs = lightning_module_params.lr_scheduler_kwargs
         self.lr_scheduler_dict_kwargs = lightning_module_params.lr_scheduler_dict_kwargs
         self.criterion = lightning_module_params.criterion(**lightning_module_params.criterion_kwargs)
-        self.classes = list(classes.keys())
+        self.classes = classes
         self.step_outputs = {
             "train": CardioMetrics(classes=self.classes, stage="train", external_metrics=["loss"]),
             "val": CardioMetrics(classes=self.classes, stage="val", external_metrics=["loss"]),
