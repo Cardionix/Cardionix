@@ -58,56 +58,48 @@ class CardioDataModule(pl.LightningDataModule):
     def __init__(self,
                  dataset_params: Union[ClassifyDatasetParams, Any],
                  etl_pipeline_params: ETLPipelineParams,
-                 datamodule_params: DataModuleParams,
-                 seed: Optional[int] = 42
+                 datamodule_params: DataModuleParams
                  ):
         super().__init__()
-        self.__dataset_params = dataset_params
-        self.__datamodule_params = datamodule_params
-        self.__etl_pipeline_params = etl_pipeline_params
 
+        self.__batch_size = datamodule_params.batch_size
+        self.__num_workers = datamodule_params.num_workers
+        self.__dataset_params = dataset_params
+        self.__etl_pipeline_params = etl_pipeline_params
         self.__num_subsets = len(self.__dataset_params.split_ratio)
         self.data_source = "https://www.kaggle.com/datasets/mersico/dangerous-heartbeat-dataset-dhd"
-        self.__seed = seed
 
         self.__data_train = None
         self.__data_val = None
         self.__data_test = None
-
-    @property
-    def generator(self) -> torch.Generator:
-        return torch.Generator().manual_seed(self.__seed)
 
     def setup(self, stage: str = None) -> None:
 
         self.__data_train = CardioAnomalyDataset(
             self.__dataset_params,
             self.__etl_pipeline_params,
-            stage="train",
-            generator=self.generator
+            stage="train"
         )
 
         if self.__num_subsets >= 2:
             self.__data_val = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
-                stage="val",
-                generator=self.generator
+                stage="val"
             )
 
         if self.__num_subsets == 3:
             self.__data_test = CardioAnomalyDataset(
                 self.__dataset_params,
                 self.__etl_pipeline_params,
-                stage="test",
-                generator=self.generator
+                stage="test"
             )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.__data_train,
-            batch_size=self.__datamodule_params.batch_size,
-            num_workers=self.__datamodule_params.num_workers,
+            batch_size=self.__batch_size,
+            num_workers=self.__num_workers,
             shuffle=True,
             pin_memory=True
         )
@@ -115,8 +107,8 @@ class CardioDataModule(pl.LightningDataModule):
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.__data_val,
-            batch_size=self.__datamodule_params.batch_size,
-            num_workers=self.__datamodule_params.num_workers,
+            batch_size=self.__batch_size,
+            num_workers=self.__num_workers,
             shuffle=False,
             pin_memory=True
         )
@@ -124,12 +116,11 @@ class CardioDataModule(pl.LightningDataModule):
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.__data_test,
-            batch_size=self.__datamodule_params.batch_size,
-            num_workers=self.__datamodule_params.num_workers,
+            batch_size=self.__batch_size,
+            num_workers=self.__num_workers,
             shuffle=False,
             pin_memory=True
         )
 
     def predict_dataloader(self) -> DataLoader:
-        return self.test_dataloader() if self.__num_subsets == 3  else self.val_dataloader()
-    
+        return self.test_dataloader() if self.__num_subsets == 3 else self.val_dataloader()

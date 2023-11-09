@@ -89,13 +89,11 @@ class LightTrainer:
             lightmodule_config,
             etl_pipeline_config,
             dataset_config,
-            seed,
-            kwargs
+            seed, kwargs
         )
 
         self.__logger = WandbLogger(
-            name=name,
-            project=project,
+            name=name, project=project,
             log_model=True,
             config=self.config,
             job_type=job_type,
@@ -105,14 +103,12 @@ class LightTrainer:
         self.__datamodule = CardioDataModule(
             dataset_config,
             etl_pipeline_config,
-            datamodule_config,
-            seed=seed
+            datamodule_config
         )
 
         self.__lightmodule = CardioLightningModule(
-            lightmodule_config,
-            model,
-            dataset_config.classes
+            lightmodule_config, model,
+            classes=tuple(dataset_config.classes.keys())
         )
 
         self.__trainer = self.get_trainer(kwargs)
