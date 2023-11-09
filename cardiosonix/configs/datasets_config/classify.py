@@ -32,19 +32,19 @@ class ClassifyDatasetParams(BaseModel):
 
     audio_dirpath: DirectoryPath
     extra_filepath: Optional[FilePath] = None
-    target_columns: str | list[str]
     labels_filepath: FilePath
     metadata_filepath: Optional[FilePath] = None
     split_ratio: list[float] = Field(default=[0.80, 0.20], max_items=3, min_items=2)
-    classes: Optional[dict] = {
-        "artifact": ["artifact"],
-        "healthy": ["normal", 0],
-        "abnormal": ["murmur", "extrahls", "extrastole", 1]
+    merge_classes: Optional[dict] = {
+        "artifact": "artifact",
+        "healthy": "normal",
+        "abnormal": ["murmur", "extrahls", "extrastole"]
     }
 
     @field_validator("extra_filepath", "labels_filepath", "metadata_filepath")
     def filepath_validator(cls, value):
-        if not value: return value
+        if not value:
+            return None
         extension = str(value).rsplit(".", maxsplit=1)[-1]
         if extension != "csv":
             raise ValueError(
