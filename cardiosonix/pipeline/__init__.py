@@ -4,4 +4,4 @@ feature extraction and data augmentation.
 """
 
 from .datasets import *
-from .transforms import *
+from .preprocessing import *

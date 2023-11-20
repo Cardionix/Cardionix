@@ -5,10 +5,10 @@ which initializes the ``CardioAnomalyDataset`` and issues a Dataloader depending
 
 __all__ = ["CardioDataModule"]
 
-from typing import Union, Any
-
 import pytorch_lightning as pl
+import torch
 from torch.utils.data import DataLoader
+from pydantic import BaseModel
 
 from ..pipeline import CardioAnomalyDataset
 from ..configs import ClassifyDatasetParams, ETLPipelineParams, DataModuleParams
@@ -55,15 +55,16 @@ class CardioDataModule(pl.LightningDataModule):
             containing parameters (configuration) for ``ETLPipeline`` initialization.
     """
     def __init__(self,
-                 dataset_params: Union[ClassifyDatasetParams, Any],
-                 etl_pipeline_params: ETLPipelineParams,
-                 datamodule_params: DataModuleParams,
+                 dataset_params: ClassifyDatasetParams | BaseModel,
+                 etl_pipeline_params: ETLPipelineParams | BaseModel,
+                 datamodule_params: DataModuleParams | BaseModel
                  ):
         super().__init__()
-        self.__dataset_params = dataset_params
-        self.__datamodule_params = datamodule_params
-        self.__etl_pipeline_params = etl_pipeline_params
 
+        self.__batch_size = datamodule_params.batch_size
+        self.__num_workers = datamodule_params.num_workers
+        self.__dataset_params = dataset_params
+        self.__etl_pipeline_params = etl_pipeline_params
         self.__num_subsets = len(self.__dataset_params.split_ratio)
         self.data_source = "https://www.kaggle.com/datasets/mersico/dangerous-heartbeat-dataset-dhd"
 
@@ -96,8 +97,8 @@ class CardioDataModule(pl.LightningDataModule):
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.__data_train,
-            batch_size=self.__datamodule_params.batch_size,
-            num_workers=self.__datamodule_params.num_workers,
+            batch_size=self.__batch_size,
+            num_workers=self.__num_workers,
             shuffle=True,
             pin_memory=True
         )
@@ -105,8 +106,8 @@ class CardioDataModule(pl.LightningDataModule):
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.__data_val,
-            batch_size=self.__datamodule_params.batch_size,
-            num_workers=self.__datamodule_params.num_workers,
+            batch_size=self.__batch_size,
+            num_workers=self.__num_workers,
             shuffle=False,
             pin_memory=True
         )
@@ -114,12 +115,11 @@ class CardioDataModule(pl.LightningDataModule):
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.__data_test,
-            batch_size=self.__datamodule_params.batch_size,
-            num_workers=self.__datamodule_params.num_workers,
+            batch_size=self.__batch_size,
+            num_workers=self.__num_workers,
             shuffle=False,
             pin_memory=True
         )
 
     def predict_dataloader(self) -> DataLoader:
-        return self.test_dataloader() if self.__num_subsets == 3  else self.val_dataloader()
-    
+        return self.test_dataloader() if self.__num_subsets == 3 else self.val_dataloader()
