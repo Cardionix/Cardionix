@@ -78,7 +78,11 @@ class AudioAugmentations:
 class AudioPreprocessor(AudioAugmentations):
     """
     This class implements methods to preprocess all audio samples
-    through the single (standard) interface, which was defined by args.
+    through the single (standard) interface, which was defined by args:
+        - Converting to one sample rate and duration
+        - Augmentations
+        - Extract any features (MFCCs)
+        - etc.
 
     :param extractor: type of extractor which will be used to extract features from audi samples
     :param extractor_kwargs: extractor keyword arguments

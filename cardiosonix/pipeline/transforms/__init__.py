@@ -1,5 +1,0 @@
-"""
-Docstring
-"""
-
-from .pipeline import *
