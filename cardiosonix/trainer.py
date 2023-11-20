@@ -4,7 +4,7 @@ which is responsible for initializing training,
 building and logging the configurations of all modules and project packages.
 """
 
-__all__ = ["LightTrainer"]
+__all__ = ["CardioTrainer"]
 
 from typing import Union, Optional, Any
 import warnings
@@ -21,9 +21,9 @@ from .engine import CardioDataModule
 from .engine import CardioLightningModule
 
 
-class LightTrainer:
+class CardioTrainer:
     r"""
-    LightTrainer is a wrapper for the ``Trainer`` class adapted to the current project for better usability
+    CardioTrainer is a wrapper for the ``Trainer`` class adapted to the current project for better usability
     and it also high-level API for initializing and configuring the training process and model validation.
     This class accepts parameters encapsulated in BaseModel subclasses,
     which are then used to initialize the ``CardioLightningModule`` and ``CardioDataModule``
@@ -108,7 +108,7 @@ class LightTrainer:
 
         self.__lightmodule = CardioLightningModule(
             lightmodule_config, model,
-            classes=tuple(dataset_config.classes.keys())
+            classes=tuple(dataset_config.merge_classes.keys())
         )
 
         self.__trainer = self.get_trainer(kwargs)
