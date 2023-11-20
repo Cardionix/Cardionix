@@ -196,7 +196,7 @@ class CardioMetrics(ProbaStorage):
         return report
 
     def add(self, **kwargs):
-        if self.external_metrics != None:
+        if self.external_metrics is not None:
             self.external_metrics.append(**kwargs)
         else:
             raise RuntimeError(
@@ -261,13 +261,12 @@ class CardioMetrics(ProbaStorage):
         Values accumulated over N iterations are averaged
         """
         outputs = self[:]
-
         roc_auc = roc_auc_score(outputs["y_true"], outputs["y_prob"], multi_class="ovo")
         fb_score = fbeta_score(outputs["y_true"], outputs["y_pred"], beta=self.beta, average="micro")
         class_report = classification_report(outputs["y_true"], outputs["y_pred"], output_dict=True)
         metrics = self.__define_metrics(roc_auc, fb_score, class_report)
 
-        if self.external_metrics != None:
+        if self.external_metrics is not None:
             metrics.update(self.external_metrics.average())
             self.external_metrics.clear()
         return metrics
