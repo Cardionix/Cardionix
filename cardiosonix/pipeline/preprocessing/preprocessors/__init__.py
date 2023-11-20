@@ -1,6 +1,10 @@
-def main():
-    pass
+"""
+This package contains classes for:
+- preprocessing and standardization tabular and audio data.
+- extracting features from audio data.
+- normalization and encoding tabular features.
+- etc.
+"""
 
-
-if __name__ == "__main__":
-    main()
+from .audio import *
+from .tabular import *
