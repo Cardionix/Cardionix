@@ -5,11 +5,10 @@ which initializes the ``CardioAnomalyDataset`` and issues a Dataloader depending
 
 __all__ = ["CardioDataModule"]
 
-from typing import Union, Any, Optional
-
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
+from pydantic import BaseModel
 
 from ..pipeline import CardioAnomalyDataset
 from ..configs import ClassifyDatasetParams, ETLPipelineParams, DataModuleParams
@@ -56,9 +55,9 @@ class CardioDataModule(pl.LightningDataModule):
             containing parameters (configuration) for ``ETLPipeline`` initialization.
     """
     def __init__(self,
-                 dataset_params: Union[ClassifyDatasetParams, Any],
-                 etl_pipeline_params: ETLPipelineParams,
-                 datamodule_params: DataModuleParams
+                 dataset_params: ClassifyDatasetParams | BaseModel,
+                 etl_pipeline_params: ETLPipelineParams | BaseModel,
+                 datamodule_params: DataModuleParams | BaseModel
                  ):
         super().__init__()
 
