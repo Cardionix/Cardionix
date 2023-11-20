@@ -54,8 +54,7 @@ class TabularPreprocessor:
 
     @staticmethod
     def __define_root() -> str:
-        root = os.environ.get("PYTHONPATH", None)
-        preprocessor_dir = os.path.join(root if root else os.getcwd(), "preprocessors")
+        preprocessor_dir = os.path.join(os.getcwd(), "preprocessors")
         if not os.path.exists(preprocessor_dir):
             os.mkdir(preprocessor_dir)
         return preprocessor_dir
