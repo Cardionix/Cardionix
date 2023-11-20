@@ -6,6 +6,8 @@ for checking correctness of the building and parthing datasets.
 __all__ = ["HealthChecker"]
 
 import os
+from typing import Optional
+from pathlib import Path
 import pandas as pd
 
 

@@ -12,6 +12,7 @@ from typing import Optional, Literal
 
 import numpy as np
 import torch
+from torch.nn import Module
 
 from librosa.util import fix_length
 from librosa import get_duration, load

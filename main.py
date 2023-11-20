@@ -6,12 +6,11 @@ import torch
 from torch import nn
 from torch import optim
 from torch.optim import lr_scheduler
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-
-from cardiosonix import LightTrainer
+from cardiosonix import CardioTrainer
 from cardiosonix.models import BaselineRNNModel
 from cardiosonix.configs import ClassifyDatasetParams, ETLPipelineParams
 from cardiosonix.configs import DataModuleParams, LightningModuleParams
+from callbacks import callbacks
 
 
 def main(
@@ -21,33 +20,15 @@ def main(
         lightmodule_config: LightningModuleParams
 ):
 
-    callbacks = [
-        ModelCheckpoint(
-            dirpath="./checkpoints",
-            filename="epoch={epoch}-val_los={val/loss:.2f}-val_roc_auc={val/roc_auc:.2f}",
-            monitor="val/roc_auc",
-            mode="max",
-            save_top_k=10,
-            auto_insert_metric_name=False
-        ),
-
-        EarlyStopping(
-            monitor="val/roc_auc",
-            mode="max",
-            patience=8,
-            min_delta=1e-5,
-        )
-    ]
-
     model = BaselineRNNModel(
         input_shape=(1, 52),
-        encoder_depth=[2048, 1024, 512],
-        rnn_depth=[256, 128],
-        decoder_depth=[64, 32, 3],
-        activation="relu",
+        encoder_depth=[1024, 512, 256],
+        rnn_depth=[128, 64],
+        decoder_depth=[32, 16, 3],
+        activation="relu"
     )
 
-    trainer = LightTrainer(
+    trainer = CardioTrainer(
         # Module configurations
         model=model,
         datamodule_config=datamodule_config,
@@ -55,9 +36,9 @@ def main(
         etl_pipeline_config=etl_pipeline_config,
         lightmodule_config=lightmodule_config,
         # Logging configuration
-        job_type="feat",
-        name="test run",
-        tags=["new feat", "functional"],
+        job_type="training",
+        name="low params model",
+        tags=["custom classes", "low params"],
         # Global seed
         seed=42,
         # pl.Trainer kwargs
@@ -65,7 +46,7 @@ def main(
         callbacks=callbacks,
         accelerator="auto",
         devices="auto",
-        enable_model_summary=True,
+        enable_model_summary=False,
         enable_progress_bar=True,
         fast_dev_run=False,
         max_epochs=100,
@@ -74,15 +55,17 @@ def main(
         strategy="auto"
     )
 
+    trainer.fit()
     trainer.predict()
 
 
 if __name__ == "__main__":
     dataset_params = ClassifyDatasetParams(
-        audio_dirpath="./data/audio",
-        labels_filepath="./data/labels.csv",
+        #extra_filepath="./data/DHD/extra/CDC_survey_2020.csv",
+        audio_dirpath="./data/DHD/audio",
+        labels_filepath="./data/DHD/labels.csv",
         split_ratio=[0.80, 0.20],
-        classes={
+        merge_classes={
             "artifact": ["artifact"],
             "healthy": ["normal"],
             "abnormal": ["murmur", "extrahls", "extrastole"]
@@ -104,10 +87,7 @@ if __name__ == "__main__":
         }
     )
 
-    datamodule_params = DataModuleParams(
-        batch_size=20,
-        num_workers=12
-    )
+    datamodule_params = DataModuleParams(batch_size=20, num_workers=12)
 
     lightmodule_params = LightningModuleParams(
         optimizer=optim.Adam,
@@ -124,7 +104,7 @@ if __name__ == "__main__":
         },
         criterion=nn.CrossEntropyLoss,
         criterion_kwargs={
-            "weight": torch.tensor([0.23, 0.61, 2.16, 1.14, 1.53])
+            "weight": torch.tensor([1.0, 1.0, 1.0])
         }
     )
 

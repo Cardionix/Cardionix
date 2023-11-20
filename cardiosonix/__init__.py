@@ -16,7 +16,7 @@ For example::
 
     # Importing our libraries
 
-    >>> from cardiosonix import LightTrainer
+    >>> from cardiosonix import CardioTrainer
     >>> from cardiosonix import BaselineRNNModel
     >>> from cardiosonix import DatasetParams, ETLPipelineParams
     >>> from cardiosonix import DataModuleParams, LightningModuleParams
@@ -65,7 +65,7 @@ For example::
 
     # Initializing LightTrainer
 
-    >>> trainer = LightTrainer(
+    >>> trainer = CardioTrainer(
     >>>     datamodule_config=datamodule_params,
     >>>     dataset_config=dataset_params,
     >>>     etl_pipeline_config=etl_pipeline_params,
