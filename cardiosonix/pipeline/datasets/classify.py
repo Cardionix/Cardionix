@@ -37,6 +37,7 @@ class Builder(DatasetPartitioner):
                  stage: Literal["train", "val", "test"]
                  ):
 
+        super().__init__()
         self.__split_ratio = dataset_params.split_ratio
         self.__stage = stage
         self.__audio_dirpath = dataset_params.audio_dirpath

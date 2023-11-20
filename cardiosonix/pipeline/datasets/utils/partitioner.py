@@ -25,12 +25,13 @@ class DatasetPartitioner(HealthChecker):
         then it will be generated and set as 'PL_GLOBAL_SEED'.
     """
 
-    __seed = pl.seed_everything()
-    __stages: dict = {
-        "train": 0,
-        "val": 1,
-        "test": 2
-    }
+    def __init__(self):
+        self.__seed = pl.seed_everything()
+        self.__stages: dict = {
+            "train": 0,
+            "val": 1,
+            "test": 2
+        }
 
     @property
     def stages(self):
