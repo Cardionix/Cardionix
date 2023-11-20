@@ -25,10 +25,12 @@ class ETLPipelineParams(BaseModel):
     """
 
     extractor: Literal["MFCC"]
-    extractor_kwargs: dict
-    merge_proba: Optional[float] = 0.0
+    extractor_kwargs: Optional[dict] = None
+    augment_kwargs: Optional[dict] = None
     merge_rules: Optional[dict] = None
     sample_rate: Optional[int] = 22050
     duration: Optional[int] = 10
     mono: Optional[bool] = True
     pad_mode: Literal["constant", "edge", "linear_ramp", "reflect", "symmetric", "nearest_neighbors"] = "constant"
+    scaler: Optional[Literal["StandardScaler", "Normalizer", "MinMaxScaler"]] = None
+    encoder: Optional[Literal["LabelEncoder", "OneHotEncoder"]] = None
