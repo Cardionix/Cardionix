@@ -167,8 +167,12 @@ class ETLPipeline(AudioPreprocessor, TabularPreprocessor):
 
     def preprocess_audio(self, filepath: str | Path) -> torch.FloatTensor:
         """
-        Performs loading of an audio sample, data preprocessing, augmentation and feature extraction step by step.
-        Finally returns a set of features cast to a tensor type
+        Performs step by step:
+            - loading of an audio sample
+            - ata preprocessing
+            - augmentation
+            - feature extraction
+        Finally returns a set of features cast to a tensor type.
         """
         waveform = self.load_safely(filepath)
         waveform = self.augment(waveform, **self.__augment_kwargs)
