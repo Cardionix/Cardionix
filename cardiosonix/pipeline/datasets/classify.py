@@ -10,6 +10,7 @@ __all__ = ["CardioAnomalyDataset"]
 
 from typing import Literal, Optional
 from pathlib import Path
+import os
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,13 @@ from ..preprocessing import ETLPipeline
 
 
 class Builder(DatasetPartitioner):
+    """
+    Build dataset, perform initialization classes for current loop stage:
+        - Create instance of ETLPipeline for feature extraction
+        - Load and get path of dataset for current loop stage by seed
+        - Create merge map for merging audio files
+        - etc.
+    """
     def __init__(self,
                  dataset_params: ClassifyDatasetParams,
                  etl_pipeline_params: ETLPipelineParams,
