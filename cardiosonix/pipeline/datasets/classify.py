@@ -43,8 +43,15 @@ class Builder(DatasetPartitioner):
         self.__audio_dirpath = dataset_params.audio_dirpath
         self.__metadata_filepath = dataset_params.metadata_filepath
         self.__labels_filepath = dataset_params.labels_filepath
-        self.__labels_dict = self.__init_classes(dataset_params.merge_classes)
         self.__rules_merge_classes = dataset_params.merge_classes
+        self.__extra_dataset = None
+        self.__extra_labels = None
+
+        self.__dataset, self.__labels = self.__build_dataset(
+            dataset_params.labels_filepath,
+            keep_instance=False,
+            columns=["filename", "label"]
+        )
 
         self.__pipeline = ETLPipeline(
             tabular=self.__load(dataset_params.extra_filepath, exclude="label"),
@@ -52,20 +59,15 @@ class Builder(DatasetPartitioner):
             **etl_pipeline_params.model_dump()
         )
 
-        self.__dataset = self.__build_dataset(
-            dataset_params.labels_filepath,
-            keep_instance=False,
-            columns=["filename", "label"]
-        )
-
-        self.__extra_dataset = self.__build_dataset(
-            dataset_params.extra_filepath,
-            keep_instance=True
-        )
+        if dataset_params.extra_filepath:
+            self.__extra_dataset, self.__extra_labels = self.__build_dataset(
+                dataset_params.extra_filepath,
+                keep_instance=True
+            )
 
     @property
     def labels(self) -> dict:
-        return self.__labels_dict
+        return self.__labels
 
     @property
     def dataset(self) -> Subset:
@@ -76,15 +78,17 @@ class Builder(DatasetPartitioner):
         return self.__extra_dataset
 
     @property
+    def extra_labels(self) -> dict | None:
+        return self.__extra_labels
+
+    @property
     def pipeline(self) -> ETLPipeline:
         return self.__pipeline
 
     @staticmethod
-    def __init_classes(classes: dict) -> dict:
-        return {
-            key: value
-            for key, value in zip(classes.keys(), range(len(classes)))
-        }
+    def __init_classes(dataset: pd.DataFrame) -> dict:
+        classes = list(dataset["label"].unique())
+        return {label: i for i, label in enumerate(classes)}
 
     def _get_filepath(self, filename: str | Path) -> str:
         filename = self.this_file_in_dir(filename, self.__audio_dirpath)
@@ -105,7 +109,7 @@ class Builder(DatasetPartitioner):
         if not self.__metadata_filepath:
             return None
         duration = self.__load(self.__metadata_filepath, "duration")
-        merge_map = self.__build_dataset(self.__labels_filepath, True, ["filename", "label"])
+        merge_map, _ = self.__build_dataset(self.__labels_filepath, True, ["filename", "label"])
         merge_map = self.is_all_unique(merge_map, "filename")
         merge_map["duration"] = duration.iloc[merge_map.index]
         return self.__build_fullpath(merge_map)
@@ -114,15 +118,17 @@ class Builder(DatasetPartitioner):
                         filepath: str | Path,
                         keep_instance: bool,
                         columns: Optional[list[str, ...]] = None
-                        ) -> None | pd.DataFrame | pd.Series:
+                        ) -> None | tuple[pd.DataFrame | pd.Series]:
 
         dataset = self.__load(filepath, columns)
         if not isinstance(dataset, pd.DataFrame):
             return None
         dataset = self.__merge_classes(dataset)
-        return self._get_section(
+        classes = self.__init_classes(dataset)
+        section = self._get_section(
             dataset, self.__split_ratio, self.__stage, keep_instance
         )
+        return section, classes
 
     @classmethod
     def __load(cls,
@@ -165,7 +171,9 @@ class CardioAnomalyDataset(Builder, Dataset):
         return torch.tensor(self.labels[label], dtype=torch.uint8)
 
     def extra_sample(self, label: str) -> np.ndarray:
-        extra = self.extra[self.extra["label"] == label]
+        extra = self.extra.copy()
+        if label in self.extra_labels.keys():
+            extra = extra[extra["label"] == label]
         extra = extra.sample().drop(columns="label")
         return self.pipeline.preprocess_tabular(extra)
 
@@ -173,7 +181,7 @@ class CardioAnomalyDataset(Builder, Dataset):
         # Return length of dataset
         return len(self.dataset)
 
-    def __getitem__(self, idx: int) -> tuple[torch.FloatTensor, torch.uint8] | tuple[torch.FloatTensor, torch.uint8, torch.FloatTensor]:
+    def __getitem__(self, idx: int) -> tuple[torch.FloatTensor, torch.uint8] | tuple[torch.FloatTensor, torch.FloatTensor, torch.uint8]:
         # Get label & filename
         filename, label = self.dataset[idx]
         filepath = self._get_filepath(filename)
@@ -183,4 +191,4 @@ class CardioAnomalyDataset(Builder, Dataset):
         if not isinstance(self.extra, pd.DataFrame):
             return features, target
         extra = self.extra_sample(label)
-        return features, target, extra
+        return features, extra, target
