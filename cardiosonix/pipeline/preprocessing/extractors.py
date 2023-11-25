@@ -77,7 +77,7 @@ class MFCCExtractor(Module):
 
         :param waveform: audio sample represented as an ``Tensor`` with a set of amplitudes.
         """
-        mfcc = self.mfcc_extractor(waveform).squeeze()
+        mfcc = self.mfcc_extractor(waveform).squeeze().T
         if self.average_by:
             mfcc = mfcc.mean(self.average_dict[self.average_by])
             mfcc = mfcc.unsqueeze(0)
