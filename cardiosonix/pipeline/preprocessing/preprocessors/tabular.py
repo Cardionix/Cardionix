@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Union, Literal, Any
 import joblib
 
+import torch
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -118,9 +119,10 @@ class TabularPreprocessor:
         self.__scaler = self.__get_preprocessor(dataset, scaler)
         self.__encoder = self.__get_preprocessor(dataset, encoder)
 
-    def preprocess_tabular(self, sample: pd.DataFrame) -> np.ndarray:
+    def preprocess_tabular(self, sample: pd.DataFrame) -> torch.FloatTensor:
         self.__check_preprocessors()
         self.__check_sample(sample)
         categorical = self.__encoding(sample)
         numerical = self.__scaling(sample)
-        return np.concatenate([numerical, categorical], axis=1)
+        features = np.concatenate([numerical, categorical], axis=1)
+        return torch.tensor(features, dtype=torch.float32)
