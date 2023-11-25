@@ -10,6 +10,12 @@ and contain data models for individual modules.
 This makes it easy to log and validate multiple input arguments**
 ****
 
+# Requirements
+```
+# Run this command from the project directory after cloning the source code
+pip install -r requirements.txt
+```
+
 ## Models
 ### <i>BaselineRNN</i>
 **This neural network is the first in the Cardio Sonix line of models.** 
@@ -44,15 +50,27 @@ The model works with the input audio signal as with tokens:
 a mel-kesprogram with time samples is extracted from the audio, 
 where each time sample has N-mel-cepstral coefficients. 
 At the very beginning, the LSTM takes a mel-cepstrogram as input 
-and produces an output tensor that goes into ResNet (Residual Neural Network).**
+and produces an output tensor that goes into ResNet (Residual Neural Network). 
+ResNet is a modified audio signal processing model from the family of residual networks. 
+In this implementation, residual blocks with pre-activation were used.
+The data then goes to the DenseMixer input. 
+This model performs inference separately for audio and tabular features, 
+then concatenates the outputs into a dense feature vector and performs inference on it, 
+after which we get a prediction based on audio and tabular data**
 
 ![](https://i.ibb.co/gW14Dh2/attached.png)
 ****
 
 ## Classes diagram
+**In the image below you can see the class diagram of the entire pipeline.**
+
 ![](https://i.ibb.co/pxc2hgf/k.jpg)
+****
 
 ## Classes description
+**And here is a brief description of all the classes involved in the pipeline architecture. 
+Classes are grouped depending on the global tasks they perform.**
+
 1. Processing, data augmentation:
    - AudioAugment – augmentation of audio data.
    - MFCCExtractor – extraction of mel-cepstral coefficients.
