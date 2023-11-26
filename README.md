@@ -10,10 +10,105 @@ and contain data models for individual modules.
 This makes it easy to log and validate multiple input arguments**
 ****
 
-# Requirements
+## Requirements
 ```
 # Run this command from the project directory after cloning the source code
 pip install -r requirements.txt
+```
+
+## Start-up
+1. **Define** `callbacks.py`. **You can edit and add your own callbacks (which will be used for early stopping etc.) to your callbacks.py**
+```
+# You can see callbacks by default
+callbacks = [
+    ModelCheckpoint(
+        dirpath="./checkpoints",
+        filename="epoch={epoch}"
+                 "-precision={val/macro avg/precision:.2f}"
+                 "-recall={val/macro avg/recall:.2f}"
+                 "-f1-score={val/macro avg/f1-score:.2f}",
+        monitor="val/macro avg/f1-score",
+        mode="max",
+        save_top_k=10,
+        auto_insert_metric_name=False,
+        save_weights_only=True
+    ),
+
+    EarlyStopping(
+        monitor="val/macro avg/f1-score",
+        mode="max",
+        patience=8,
+        min_delta=1e-6
+    )
+]
+```
+
+2. **Define** `config.py`.
+**This file should contain configurations for the Cardio Sonix Pipeline.
+You also can edite this configs as you want and
+import them into main.py to start training or
+define configurations currently into main.py**
+```
+dataset_params = ClassifyDatasetParams(
+    extra_filepath="Your/Filepath/To/Extra/Dataset",  # file .csv (label encoded CDC survey 2020)
+    audio_dirpath="Your/Dirpath/To/Audio/Of/Heartbeat/Sounds",  # dirpath (DHD/audio dir)
+    labels_filepath="Your/Filepath/To/File/With/Classes/Labels",  # file .csv (DHD/labels.csv file)
+    split_ratio=[0.80, 0.20],  # split ratio of the dataset: 80% - train and 20% - validation
+    # Which classes is needed for merging into one class
+    merge_classes={
+        "artifact": ["artifact"],
+        "healthy": ["normal"],
+        "abnormal": ["murmur", "extrahls", "extrastole"]
+    }
+)
+
+etl_pipeline_params = ETLPipelineParams(
+    scaler="Normalizer",  # scaler for normalization or scaling numerical features in tabular data
+    encoder="OneHotEncoder",  # encoder for encoding categorical features in tabular data
+    sample_rate=16000,  # sample rate for the resampling all audio data
+    duration=15,  # duration to pad or clip all audio data
+    mono=True,  # one or two audio channels load
+    extractor="MFCC",  # extractor name for extracting features from audio data
+    # extractor parameters for extracting features from audio data
+    extractor_kwargs={
+        "n_fft": 2048,
+        "win_length": 2048,
+        "hop_length": 1024,
+        "n_mels": 52,  # number of mel filters
+        "n_mfcc": 52,  # number of mfcc`s
+        "average_by": None  # average time or frequency axis (non-average if None)
+    }
+)
+
+datamodule_params = DataModuleParams(batch_size=20, num_workers=12)  # Data uploading parameters
+
+lightmodule_params = LightningModuleParams(
+    optimizer=optim.Adam,  # Optimizer to use for training model
+    # optimizer parameters
+    optimizer_kwargs={
+        "lr": 1e-4
+    },
+    lr_scheduler=lr_scheduler.ReduceLROnPlateau,  # learning rate Scheduler
+    # and his parameters
+    lr_scheduler_kwargs={
+        "patience": 3
+    },
+    lr_scheduler_dict_kwargs={
+        "monitor": "val/loss",
+        "interval": "epoch"
+    },
+    criterion=nn.CrossEntropyLoss,  # Loss function to use
+    # and its parameters
+    criterion_kwargs={
+        "weight": torch.tensor([1.0, 1.0, 1.0])
+    }
+)
+```
+
+3. **Run** `main.py` 
+```
+# Run this file for start training
+python main.py
 ```
 
 ## Models
@@ -65,7 +160,7 @@ after which we get a prediction based on audio and tabular data**
 **In the image below you can see the class diagram of the entire pipeline.**
 
 ![](https://i.ibb.co/pxc2hgf/k.jpg)
-****
+
 
 ## Classes description
 **And here is a brief description of all the classes involved in the pipeline architecture. 
