@@ -19,3 +19,4 @@ Note:
 """
 
 from .baseline import *
+from .cardionetv2 import CardioNetV2
