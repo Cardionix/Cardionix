@@ -10,7 +10,7 @@ install the required libraries and tools.
 
 from torch import nn
 from cardiosonix import CardioTrainer
-from cardiosonix.models import BaselineRNNModel
+from cardiosonix.models import CardioNetV2
 from callbacks import callbacks
 from configs import (
     dataset_params,
