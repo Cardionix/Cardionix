@@ -47,14 +47,22 @@ class CardioLightningModule(pl.LightningModule):
             "predict": CardioMetrics(classes=self.classes, stage="predict")
         }
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x)
+    def forward(self, features: torch.Tensor | list) -> torch.Tensor:
+        if len(features) == 2:
+            return self.model(*features)
+        return self.model(features)
+
+    @staticmethod
+    def unpack_batch(batch: list) -> tuple:
+        if len(batch) == 2:
+            return batch
+        return batch[:2], batch[2]
 
     def shared_step(self, batch: torch.Tensor, stage: str) -> torch.Tensor:
-        x, y = batch
-        logites = self.forward(x.to(torch.float32))
-        loss = self.criterion(logites, y.to(torch.int64))
-        self.step_outputs[stage].accumulate(logites, y)
+        features, target = self.unpack_batch(batch)
+        logites = self.forward(features)
+        loss = self.criterion(logites, target)
+        self.step_outputs[stage].accumulate(logites, target)
         self.step_outputs[stage].add(loss=loss)
         return loss
 
@@ -75,9 +83,9 @@ class CardioLightningModule(pl.LightningModule):
         return self.shared_epoch_end(stage="val")
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> dict:
-        x, y = batch
-        logites = self.forward(x.to(torch.float32))
-        self.step_outputs["predict"].accumulate(logites, y)
+        features, target = self.unpack_batch(batch)
+        logites = self.forward(features)
+        self.step_outputs["predict"].accumulate(logites, target)
 
     def on_predict_epoch_end(self) -> None:
         self.step_outputs["predict"].make_report()
