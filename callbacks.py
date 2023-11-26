@@ -1,10 +1,15 @@
 """
-Module containing any callbacks for the CardioTriner class as variables.
+Containing learning callbacks
+for the CardioTrainer class as variables.
+This callbacks can be used to control training (early stopping, etc.)
 """
 
 __all__ = ["callbacks"]
 
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import (
+    ModelCheckpoint,
+    EarlyStopping
+)
 
 
 callbacks = [
