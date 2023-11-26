@@ -26,9 +26,9 @@ def main(model: nn.Module) -> None:
         model=model,  # your Model (subclass nn.Module)
         # Module configurations
         datamodule_config=datamodule_params,  # Datamodule configurations
-        dataset_config=dataset_config,  # Dataset configurations
+        dataset_config=dataset_params,  # Dataset configurations
         etl_pipeline_config=etl_pipeline_params,  # ETL-pipeline configurations
-        lightmodule_config=lightmodule_config,  # Lightmodule configurations
+        lightmodule_config=lightmodule_params,  # Lightmodule configurations
         # Logging configuration
         job_type="feat test",  # WHAT TYPE JOB YOU DO? (maybe research or just validation)
         name="experimental run",  # WHAT YOU DO? (maybe you just test mew features)
