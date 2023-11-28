@@ -39,11 +39,11 @@ def main(model: nn.Module) -> None:
         callbacks=callbacks,  # define callbacks
         accelerator="auto",  # define accelerator
         devices="auto",  # define devices
-        enable_model_summary=True,  # enable model summary
+        enable_model_summary=False,  # enable model summary
         enable_progress_bar=True,  # activate progress bar
-        fast_dev_run=True,  # init testing on one epoch
-        max_epochs=100,  # maximum epochs
-        min_epochs=10,  # minimum epochs
+        fast_dev_run=False,  # init testing on one epoch
+        max_epochs=5,  # maximum epochs
+        min_epochs=5,  # minimum epochs
         num_nodes=1,  # choose nodes
         strategy="auto"  # define strategy
     )
@@ -59,7 +59,6 @@ if __name__ == "__main__":
         audio_features_shape=(235, 52),
         tabular_features=50,
         rnn_layers=1,
-        stem_channels=256,
         resnet_backbone={
             256: 2,
             512: 2,
