@@ -6,7 +6,7 @@ This class also logs metrics and changes its behavior depending on callbaks.
 
 __all__ = ["CardioLightningModule"]
 
-from typing import Any
+from typing import Any, Optional
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -47,16 +47,16 @@ class CardioLightningModule(pl.LightningModule):
             "predict": CardioMetrics(classes=self.classes, stage="predict")
         }
 
-    def forward(self, features: torch.Tensor | list) -> torch.Tensor:
-        if len(features) == 2:
+    def forward(self, features: torch.FloatTensor | list | tuple) -> torch.torch.FloatTensor:
+        if isinstance(features, (list, tuple)):
             return self.model(*features)
         return self.model(features)
 
     @staticmethod
-    def unpack_batch(batch: list) -> tuple:
-        if len(batch) == 2:
-            return batch
-        return batch[:2], batch[2]
+    def unpack_batch(batch: list) -> tuple[torch.FloatTensor, torch.IntTensor] | tuple[list, torch.IntTensor]:
+        if len(batch) == 3:
+            return batch[:2], batch[2]
+        return batch
 
     def shared_step(self, batch: torch.Tensor, stage: str) -> torch.Tensor:
         features, target = self.unpack_batch(batch)
