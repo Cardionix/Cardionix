@@ -42,7 +42,8 @@ class ResidualUnite(nn.Module):
     )
 
     def __init__(self,
-                 kernels: int,
+                 in_channels: int,
+                 out_channels: int,
                  downsample: bool,
                  activation: Literal["relu", "leaky_relu", "relu6"] = "relu"
                  ):
@@ -51,18 +52,19 @@ class ResidualUnite(nn.Module):
         self.shortcut = nn.Sequential()
         self.activation = self.activations[activation]
 
-        self.bn1 = nn.LazyBatchNorm1d()
-        self.conv1 = nn.LazyConv1d(
-            out_channels=kernels,
+        self.bn1 = nn.BatchNorm1d(in_channels)
+        self.conv1 = nn.Conv1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
             kernel_size=3,
             stride=(2 if downsample else 1),
             padding=1
         )
 
-        self.bn2 = nn.LazyBatchNorm1d()
+        self.bn2 = nn.BatchNorm1d(out_channels)
         self.conv2 = nn.Conv1d(
-            in_channels=kernels,
-            out_channels=kernels,
+            in_channels=out_channels,
+            out_channels=out_channels,
             kernel_size=3,
             stride=1,
             padding=1
@@ -70,8 +72,13 @@ class ResidualUnite(nn.Module):
 
         if downsample:
             self.shortcut = nn.Sequential(
-                nn.LazyConv1d(out_channels=kernels, kernel_size=1, stride=2),
-                nn.LazyBatchNorm1d()
+                nn.BatchNorm1d(in_channels),
+                nn.Conv1d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=1,
+                    stride=2
+                )
             )
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
@@ -79,6 +86,49 @@ class ResidualUnite(nn.Module):
         x = self.conv1(self.activation(self.bn1(x)))
         x = self.conv2(self.activation(self.bn2(x)))
         return x + shortcut
+
+
+class GlobalAvgPool1d(nn.Module):
+    """
+    Average tensor by 1 dimension.
+    This pooling does not have kernel size and
+    just average all features vector for each Conv1d kernel output.
+    Note. This layer support batch processing.
+
+    Input:
+        Tensor with shape (N, K, W), where N is batch size,
+        K is number of channels and W is feature vector for each convolution.
+
+    Example:
+         >>> y = torch.empty((10, 512, 40))
+         >>> conv = nn.Conv1d(512, 1024, kernel_size=5)
+         >>> avg = GlobalAvgPool1d()
+         >>> c_y = conv(y) # Out shape is torch.Size([10, 1024, 36])
+         >>> avg(c_y) # Out shape is torch.Size([10, 1024])
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    @staticmethod
+    def batch(x: torch.FloatTensor) -> list:
+        samples: list = []
+        for sample in x:
+            sample = sample.mean(1)
+            samples.append(sample)
+        return samples
+
+    def forward(self, x: torch.FloatTensor | torch.Tensor) -> torch.FloatTensor:
+        if x.dim() == 3:
+            x = self.batch(x)
+            return torch.vstack(x)
+        elif x.dim() == 2:
+            return x.mean(1)
+        else:
+            raise ValueError(
+                f"Expected tensor with 2 or 3 dimensions, "
+                f"but got {x.dim()}"
+            )
 
 
 class ResNet(nn.Module):
@@ -111,74 +161,140 @@ class ResNet(nn.Module):
 
     def __init__(self,
                  input_shape: tuple[int, int],
-                 stem_channels: Optional[int] = 64,
+                 stem_channels: Optional[int] = None,
                  backbone: Optional[dict[int, int]] = None
                  ):
         super().__init__()
-        self.input_shape = input_shape
-        self.backbone = backbone if backbone else self.__backbones["resnet18"]
-        self.residual_groups = self.__build_groups()
+        if not isinstance(backbone, dict):
+            backbone = self.__backbones["resnet18"]
+        self.backbone = backbone
 
-        self.stem = nn.Sequential(
-            nn.Conv1d(
-                in_channels=input_shape[0],
-                out_channels=stem_channels,
-                kernel_size=5,
-                stride=2
-            ),
-            nn.MaxPool1d(kernel_size=3, stride=2)
-        )
+        if not isinstance(stem_channels, int):
+            stem_channels = list(self.backbone.keys())[0]
+        self.stem_channels = stem_channels
+
+        self.input_shape = input_shape
+        self.stem = self.__define_stem()
+        self.residual_groups = self.__build_groups()
+        self.avgpool = GlobalAvgPool1d()
 
     @property
-    def output_shape(self) -> int:
+    def out_features(self) -> int:
         return list(self.backbone.keys())[-1]
 
+    @property
+    def groups(self) -> zip:
+        kernels = list([self.stem_channels])
+        kernels.extend(list(self.backbone.keys()))
+        channels_per_group = list(zip(kernels, kernels[1:]))
+        unites_per_group = list(self.backbone.values())
+        return zip(channels_per_group, unites_per_group)
+
+    def __define_stem(self, kernel_size: Optional[int] = 7) -> nn.Sequential:
+        conv = nn.Conv1d(
+            in_channels=self.input_shape[0],
+            out_channels=self.stem_channels,
+            kernel_size=kernel_size,
+            stride=2
+        )
+        maxpol = nn.MaxPool1d(kernel_size=3, stride=2)
+        return nn.Sequential(conv, maxpol)
+
     @staticmethod
-    def __build_group(unites: int, kernels: int, downsample: bool) -> nn.Sequential:
+    def __build_group(unites: int, downsample: bool, channels: tuple[int, int]) -> nn.Sequential:
         group = nn.ModuleList()
+        in_channels, out_channels = channels
         for index in range(unites):
-            if index == 0 and downsample:
-                unite = ResidualUnite(kernels, downsample)
+            if index == 0:
+                unite = ResidualUnite(in_channels, out_channels, downsample)
             else:
-                unite = ResidualUnite(kernels, False)
+                unite = ResidualUnite(out_channels, out_channels, False)
             group.append(unite)
         return nn.Sequential(*group)
 
     def __build_groups(self) -> nn.Sequential:
         groups = nn.ModuleList()
-        for index, (kernels, units) in enumerate(self.backbone.items()):
+        for index, (channels, units) in enumerate(self.groups):
             if index == 0:
-                group = self.__build_group(units, kernels, False)
+                group = self.__build_group(
+                    unites=units,
+                    channels=channels,
+                    downsample=False
+                )
             else:
-                group = self.__build_group(units, kernels, True)
+                group = self.__build_group(
+                    unites=units,
+                    channels=channels,
+                    downsample=True
+                )
             groups.append(group)
         return nn.Sequential(*groups)
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
         x = self.stem(x)
-        return self.residual_groups(x).mean(1)
+        x = self.residual_groups(x)
+        return self.avgpool(x)
 
 
-class Concat(nn.Module):
+class Concat1d(nn.Module):
     """
-    This layer implementation is used to concatenate
-    multiple sequences into one tensor of features.
-    """
+    Concatenate each tensors by dimision.
+    Note.
+    Support filtering of iterable object and batch processing.
 
+    Example:
+        >>> concat = Concat1d()
+        >>> y = torch.empty((10, 512))
+        >>> y1 = torch.empty((10, 512))
+        >>> out = concat((y, y1))
+        >>> out.shape # torch.Size([10, 1024])
+    """
     def __init__(self, dim: Optional[int] = 0):
         super().__init__()
         self.dim = dim
 
-    def check_sanity(self, x: list | tuple) -> list:
+    @staticmethod
+    def __check_sanity(x: list | tuple) -> list:
         return [
-            data.squeeze(self.dim)
+            data.squeeze()
             for data in x
-            if isinstance(data, torch.FloatTensor)
+            if isinstance(data, (torch.FloatTensor, torch.Tensor))
         ]
 
-    def forward(self, x: list[torch.FloatTensor | None, ...] | tuple[torch.FloatTensor | None, ...]) -> torch.FloatTensor:
-        x = self.check_sanity(x)
-        return torch.concatenate(x, dim=self.dim)
+    def __batch_concat(self,
+                       x: list[torch.FloatTensor, torch.FloatTensor] | tuple[torch.FloatTensor, torch.FloatTensor]
+                       ) -> torch.FloatTensor:
+        samples: list = []
+        batch_size = x[0].shape[0]
+        for i in range(batch_size):
+            to_concat = [x[0][i], x[1][i]]
+            sample = torch.concatenate(to_concat, dim=self.dim)
+            sample = sample.unsqueeze(self.dim)
+            samples.append(sample)
+        return torch.concatenate(samples, dim=self.dim)
+
+    @staticmethod
+    def __is_batch(x: list[torch.FloatTensor, ...] | tuple[torch.FloatTensor, ...]) -> bool:
+        if x[0].dim() == 1:
+            return False
+        return True
+
+    def __concat(self,
+                 x: list[torch.FloatTensor, torch.FloatTensor] | list[torch.FloatTensor]
+                 ) -> torch.FloatTensor:
+        if len(x) == 1:
+            return x[0]
+        if len(x) == 2 and not self.__is_batch(x):
+            return torch.concatenate(x, dim=self.dim)
+        return self.__batch_concat(x)
+
+    def forward(self,
+                x: torch.FloatTensor | list[torch.FloatTensor | None] | list[torch.FloatTensor | torch.FloatTensor]
+                ) -> torch.FloatTensor:
+        if isinstance(x, torch.FloatTensor):
+            return x
+        x = self.__check_sanity(x)
+        return self.__concat(x)
 
 
 class DenseMixer(nn.Module):
@@ -192,7 +308,6 @@ class DenseMixer(nn.Module):
     :param depth: dictionary with lists of integers where each integer is number of features for linear layer
     :param from_logites: return logites if True and probabilities if False
     """
-
     def __init__(self,
                  input_features: dict[Literal["audio", "tabular"], int],
                  num_classes: int,
@@ -246,7 +361,7 @@ class DenseMixer(nn.Module):
             )
 
     def __build_mixer(self) -> nn.Sequential:
-        head = nn.ModuleList([Concat()])
+        head = nn.ModuleList([Concat1d()])
         for index, (in_features, out_features) in enumerate(self.mixer_depth):
             if index != (len(self.mixer_depth) - 1):
                 head.append(self.get_fcc(in_features, out_features))
@@ -304,7 +419,6 @@ class CardioNetV2(nn.Module):
         and values it's number of residual units in this group.
     :param from_logites: return logites if True and probabilities if False
     """
-
     def __init__(self,
                  num_classes: int,
                  audio_features_shape: tuple[int, int],
@@ -315,13 +429,12 @@ class CardioNetV2(nn.Module):
                  dropout: Optional[float] = 0.0,
                  resnet_backbone: Optional[dict] = None,
                  mixer_depth: Optional[dict[Literal["audio", "tabular", "mixer"], int]] = None,
-                 stem_channels: Optional[int] = 64,
+                 stem_channels: Optional[int] = None,
                  from_logites: Optional[bool] = True
                  ):
         super().__init__()
         self.audio_features_shape = audio_features_shape
         self.tabular_features = tabular_features
-        self.example_input_array = torch.zeros(size=(1, *audio_features_shape))
         self.bidirectional = bidirectional
         self.rnn_hidden = rnn_hidden if rnn_hidden else self.__get_hidden_size()
 
@@ -347,13 +460,20 @@ class CardioNetV2(nn.Module):
             from_logites=from_logites
         )
 
+    @property
+    def example_input_array(self) -> torch.FloatTensor | list[torch.FloatTensor, torch.FloatTensor]:
+        example_input = [torch.zeros(size=(1, *self.audio_features_shape))]
+        if self.tabular_features:
+            example_input.append(torch.zeros(size=(1, 1, self.tabular_features)))
+        return example_input
+
     def __get_resnet_input_shape(self) -> tuple[int, int]:
         features = self.rnn_hidden * 2 if self.bidirectional else self.rnn_hidden
         return self.audio_features_shape[0], features
 
     def __get_mixer_input_features(self) -> dict[int, int]:
         return {
-            "audio": self.resnet.output_shape,
+            "audio": self.resnet.out_features,
             "tabular": self.tabular_features if self.tabular_features else 0
         }
 
@@ -366,12 +486,12 @@ class CardioNetV2(nn.Module):
         return self.resnet(output)
 
     def sanity_check(self, tabular_features: torch.FloatTensor | None) -> torch.FloatTensor | None:
-        if not isinstance(tabular_features, torch.FloatTensor) and self.tabular_features:
+        if not isinstance(tabular_features, (torch.Tensor, torch.FloatTensor)) and self.tabular_features:
             raise ValueError(
-                f"Expected 'tabular_features' must be a torch.FloatTensor "
-                f"for multimodal forward support, but got {type(tabular_features)}"
+                f"Expected 'tabular_features' must be a torch.FloatTensor or torch.Tensor "
+                f"for multimodal forward, but got {type(tabular_features)}"
             )
-        if isinstance(tabular_features, torch.FloatTensor) and not self.tabular_features:
+        if isinstance(tabular_features, (torch.Tensor, torch.FloatTensor)) and not self.tabular_features:
             raise ValueError(
                 f"You must define number of tabular features "
                 f"before calling forward for multimodal forward support, "
