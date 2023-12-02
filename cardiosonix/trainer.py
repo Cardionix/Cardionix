@@ -6,22 +6,28 @@ building and logging the configurations of all modules and project packages.
 
 __all__ = ["CardioTrainer"]
 
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, List
 import warnings
 
 import pytorch_lightning as pl
+from pytorch_lightning import LightningModule, LightningDataModule
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
+
 import torch
+from torch.utils.data import DataLoader
 from torch.nn import Module
 
-from .configs import ClassifyDatasetParams, ETLPipelineParams
-from .configs import DataModuleParams, LightningModuleParams
-from .engine import CardioDataModule
-from .engine import CardioLightningModule
+from .engine import CardioDataModule, CardioLightningModule
+from .configs import (
+    ClassifyDatasetParams,
+    ETLPipelineParams,
+    DataModuleParams,
+    LightningModuleParams
+)
 
 
-class CardioTrainer:
+class CardioTrainer(Trainer):
     r"""
     CardioTrainer is a wrapper for the ``Trainer`` class adapted to the current project for better usability
     and it also high-level API for initializing and configuring the training process and model validation.
@@ -73,54 +79,46 @@ class CardioTrainer:
                  dataset_config: Union[ClassifyDatasetParams, Any],
                  etl_pipeline_config: ETLPipelineParams,
                  lightmodule_config: LightningModuleParams,
-                 model: Module,
                  name: str,
                  job_type: Optional[str] = None,
                  project: Optional[str] = "Cardio Sonix",
                  tags: Optional[Union[list, tuple]] = None,
                  seed: Optional[int] = 42,
-                 **kwargs: Any
+                 log_modules: Optional[bool] = True,
+                 **kwargs
                  ):
-
-        self.on_startup(seed)
-
-        self.config = self.define_config(
-            datamodule_config,
-            lightmodule_config,
-            etl_pipeline_config,
-            dataset_config,
-            seed, kwargs
-        )
-
-        self.__logger = WandbLogger(
-            name=name, project=project,
+        if log_modules:
+            log_modules = self._runs_config(
+                datamodule_config,
+                dataset_config,
+                etl_pipeline_config,
+                lightmodule_config,
+                seed, **kwargs
+            )
+        logger = WandbLogger(
+            name=name,
+            project=project,
             log_model=True,
-            config=self.config,
+            config=log_modules,
             job_type=job_type,
             tags=tags
         )
 
-        self.__datamodule = CardioDataModule(
-            dataset_config,
-            etl_pipeline_config,
-            datamodule_config
-        )
-
-        self.__lightmodule = CardioLightningModule(
-            lightmodule_config, model,
-            classes=tuple(dataset_config.merge_classes.keys())
-        )
-
-        self.__trainer = self.get_trainer(kwargs)
+        super().__init__(logger=logger, **kwargs)
+        self._on_startup(seed)
+        self.__lightmodule = None
+        self.__lightmodule_config = lightmodule_config
+        self.__classes = tuple(dataset_config.merge_classes.keys())
+        self.__datamodule = CardioDataModule(dataset_config, etl_pipeline_config, datamodule_config)
 
     @staticmethod
-    def define_config(
-            datamodule_config,
-            lightmodule_config,
-            etl_pipeline_config,
-            dataset_config,
-            seed,
-            kwargs
+    def _runs_config(
+            datamodule_config: DataModuleParams,
+            dataset_config: Union[ClassifyDatasetParams, Any],
+            etl_pipeline_config: ETLPipelineParams,
+            lightmodule_config: LightningModuleParams,
+            seed: int,
+            **kwargs
     ) -> dict:
         """
         The method accepts arguments encapsulated in ``BaseModel`` subclasses
@@ -131,43 +129,131 @@ class CardioTrainer:
         which are also written to the global configuration dictionary (for example, ``seed``)
         """
         return {
-            "datamodule_config": datamodule_config.model_dump(),
-            "etl_pipeline_config": etl_pipeline_config.model_dump(),
-            "dataset_config": dataset_config.model_dump(),
-            "lightmodule_config": lightmodule_config.model_dump(),
-            "random_seed": seed,
-            "trainer_config": kwargs
+            "datamodule": datamodule_config.model_dump(),
+            "transforms": etl_pipeline_config.model_dump(),
+            "dataset": dataset_config.model_dump(),
+            "optimization": lightmodule_config.model_dump(),
+            "seed": seed,
+            "trainer": kwargs
         }
 
-    def get_trainer(self, kwargs: dict) -> Trainer:
+    def __get_lightning_module(self, model: Module) -> LightningModule:
+        return CardioLightningModule(self.__lightmodule_config, model, self.__classes)
+
+    def fit(self,
+            model: Module | LightningModule,
+            train_dataloaders: DataLoader | None = None,
+            val_dataloaders: DataLoader | None = None,
+            datamodule: LightningDataModule | None = None,
+            ckpt_path: str | None = None
+            ) -> None:
+        r"""Runs the full optimization routine.
+
+        Args:
+            model: Model to fit.
+
+            train_dataloaders: An iterable or collection of iterables specifying training samples.
+                Alternatively, a :class:`~pytorch_lightning.core.datamodule.LightningDataModule` that defines
+                the :class:`~pytorch_lightning.core.hooks.DataHooks.train_dataloader` hook.
+
+            val_dataloaders: An iterable or collection of iterables specifying validation samples.
+
+            datamodule: A :class:`~pytorch_lightning.core.datamodule.LightningDataModule` that defines
+                the :class:`~pytorch_lightning.core.hooks.DataHooks.train_dataloader` hook.
+
+            ckpt_path: Path/URL of the checkpoint from which training is resumed. Could also be one of two special
+                keywords ``"last"`` and ``"hpc"``. If there is no checkpoint file at the path, an exception is raised.
+
+        Raises:
+            TypeError:
+                If ``model`` is not :class:`~pytorch_lightning.core.module.LightningModule` for torch version less than
+                2.0.0 and if ``model`` is not :class:`~pytorch_lightning.core.module.LightningModule` or
+                :class:`torch._dynamo.OptimizedModule` for torch versions greater than or equal to 2.0.0 .
+
+        For more information about multiple dataloaders, see this :ref:`section <multiple-dataloaders>`.
         """
-        The method initializes the ``Trainer`` class from ``pytorch_lightning``,
-        which takes hooks from callbacks module and also
-        accepts any named arguments that were passed when initializing the ``LightTrainer`` class.
-        """
-        return Trainer(
-            logger=self.__logger,
-            **kwargs
+        if isinstance(model, Module):
+            self.__lightmodule = self.__get_lightning_module(model)
+        if isinstance(model, LightningModule):
+            self.__lightmodule = model
+        if not isinstance(datamodule, LightningDataModule) and not isinstance(train_dataloaders, DataLoader):
+            datamodule = self.__datamodule
+        return super().fit(
+            self.__lightmodule,
+            train_dataloaders,
+            val_dataloaders,
+            datamodule,
+            ckpt_path
         )
 
-    def fit(self) -> None:
-        """
-        The method initializes training.
-        Takes an instance of the ``CardioDataModule`` and ``CardioLightningModule`` class.
-        """
-        self.__trainer.fit(
-            model=self.__lightmodule,
-            datamodule=self.__datamodule
-        )
+    def predict(self,
+                model: LightningModule | None = None,
+                dataloaders: DataLoader | None = None,
+                datamodule: LightningDataModule | None = None,
+                return_predictions: Optional[bool] = None,
+                ckpt_path: Optional[str] = None
+                ) -> Union[List[Any], List[List[Any]]]:
+        r"""Run inference on your data. This will call the model forward function to compute predictions. Useful to
+        perform distributed and batched predictions. Logging is disabled in the predict hooks.
 
-    def predict(self):
-        self.__trainer.predict(
-            model=self.__lightmodule,
-            datamodule=self.__datamodule
+        Args:
+            model: The model to predict with.
+
+            dataloaders: An iterable or collection of iterables specifying predict samples.
+                Alternatively, a :class:`~pytorch_lightning.core.datamodule.LightningDataModule` that defines
+                the :class:`~pytorch_lightning.core.hooks.DataHooks.predict_dataloader` hook.
+
+            datamodule: A :class:`~pytorch_lightning.core.datamodule.LightningDataModule` that defines
+                the :class:`~pytorch_lightning.core.hooks.DataHooks.predict_dataloader` hook.
+
+            return_predictions: Whether to return predictions.
+                ``True`` by default except when an accelerator that spawns processes is used (not supported).
+
+            ckpt_path: Either ``"best"``, ``"last"``, ``"hpc"`` or path to the checkpoint you wish to predict.
+                If ``None`` and the model instance was passed, use the current weights.
+                Otherwise, the best model checkpoint from the previous ``trainer.fit`` call will be loaded
+                if a checkpoint callback is configured.
+
+        For more information about multiple dataloaders, see this :ref:`section <multiple-dataloaders>`.
+
+        Returns:
+            Returns a list of dictionaries, one for each provided dataloader containing their respective predictions.
+
+        Raises:
+            TypeError:
+                If no ``model`` is passed and there was no ``LightningModule`` passed in the previous run.
+                If ``model`` passed is not `LightningModule` or `torch._dynamo.OptimizedModule`.
+
+            MisconfigurationException:
+                If both ``dataloaders`` and ``datamodule`` are passed. Pass only one of these.
+
+            RuntimeError:
+                If a compiled ``model`` is passed and the strategy is not supported.
+
+        See :ref:`Lightning inference section<deploy/production_basic:Predict step with your LightningModule>` for more.
+        """
+        if isinstance(model, Module):
+            self.__lightmodule = self.__get_lightning_module(model)
+        if isinstance(model, LightningModule):
+            self.__lightmodule = model
+        if not isinstance(self.__lightmodule, LightningModule):
+            raise ValueError(
+                f"Expected 'model' must be a Module subclass or "
+                f"LightningModule subclass if method fit was never called, "
+                f"but got {model=} and {self.__lightmodule=}"
+            )
+        if not isinstance(datamodule, LightningDataModule) and not isinstance(dataloaders, DataLoader):
+            datamodule = self.__datamodule
+        return super().predict(
+            self.__lightmodule,
+            dataloaders,
+            datamodule,
+            return_predictions,
+            ckpt_path
         )
 
     @staticmethod
-    def on_startup(seed: int) -> None:
+    def _on_startup(seed: int) -> None:
         """
         Method that sets seed for pseudo-random number generators in: pytorch, numpy, python.random.
         In addition, sets the following environment variables:
@@ -182,7 +268,6 @@ class CardioTrainer:
         And Releases all unoccupied cached memory currently held by the caching allocator
         so that those can be used in other GPU application and visible in nvidia-smi.
         """
-
         pl.seed_everything(seed)
         torch.set_float32_matmul_precision("medium")
         torch.cuda.empty_cache()
