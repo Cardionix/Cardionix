@@ -12,6 +12,7 @@ from torch import nn
 from cardiosonix import CardioTrainer
 from cardiosonix.models import CardioNetV2
 from callbacks import callbacks
+from cardiosonix.utils import load_from_checkpoint
 from configs import (
     dataset_params,
     etl_pipeline_params,
@@ -20,19 +21,18 @@ from configs import (
 )
 
 
-def main(model: nn.Module) -> None:
+def main() -> None:
     # (*) YOU SHOULD DEFINE TRAINER HERE (*)
     trainer = CardioTrainer(
-        model=model,  # your Model (subclass nn.Module)
         # Module configurations
         datamodule_config=datamodule_params,  # Datamodule configurations
         dataset_config=dataset_params,  # Dataset configurations
         etl_pipeline_config=etl_pipeline_params,  # ETL-pipeline configurations
         lightmodule_config=lightmodule_params,  # Lightmodule configurations
         # Logging configuration
-        job_type="feat test",  # WHAT TYPE JOB YOU DO? (maybe research or just validation)
-        name="experimental run",  # WHAT YOU DO? (maybe you just test mew features)
-        tags=["any Optim", "any lr"],  # WHAT CAN YOU ASK ABOUT RUN? ('SGD', 'lr 1e-4', 'etc.')
+        job_type="research",  # WHAT TYPE JOB YOU DO? (maybe research or just validation)
+        name="Softplus | cardionetv2",  # WHAT YOU DO? (maybe you just test mew features)
+        tags=["cardionetv2", "Adam", "epoch 150"],  # WHAT CAN YOU ASK ABOUT RUN? ('SGD', 'lr 1e-4', 'etc.')
         seed=42,  # global SEED
         # pl.Trainer kwargs
         log_every_n_steps=20,  # log metrics every N steps
@@ -42,31 +42,32 @@ def main(model: nn.Module) -> None:
         enable_model_summary=False,  # enable model summary
         enable_progress_bar=True,  # activate progress bar
         fast_dev_run=False,  # init testing on one epoch
-        max_epochs=5,  # maximum epochs
-        min_epochs=5,  # minimum epochs
+        max_epochs=1,  # maximum epochs
+        min_epochs=1,  # minimum epochs
         num_nodes=1,  # choose nodes
         strategy="auto"  # define strategy
     )
 
-    trainer.fit()  # start training
-    trainer.predict()  # start prediction
-
-
-if __name__ == "__main__":
     # (~) YOU SHOULD DEFINE YOUR MODEL HERE (~)
     model = CardioNetV2(
         num_classes=3,
-        audio_features_shape=(235, 52),
+        audio_features_shape=(431, 128),
         tabular_features=50,
         rnn_layers=1,
         resnet_backbone={
-            256: 2,
             512: 2,
             1024: 2,
+            2048: 2,
         },
         mixer_depth={
             "tabular": [128, 256, 512],
             "mixer": [2048]
         }
     )
-    main(model)
+
+    trainer.fit(model)  # start training
+    trainer.predict()  # start prediction
+
+
+if __name__ == "__main__":
+    main()
