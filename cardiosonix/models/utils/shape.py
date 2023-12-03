@@ -3,9 +3,17 @@ The module contains helper functions or classes
 for more flexible and easier building of machine learning architectures.
 """
 
-__all__ = ["_compute_conv_out_features", "_compute_same_padding", "_conv_shape_info"]
+__all__ = [
+    "_compute_conv_out_features",
+    "_compute_same_padding",
+    "_conv_shape_info"
+]
 
-from typing import Union, Optional, Literal
+from typing import (
+    Union,
+    Optional,
+    Literal
+)
 
 
 def _compute_conv_out_features(
