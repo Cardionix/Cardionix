@@ -6,7 +6,7 @@ and use 1D convolution instead of 2D convolution as original implementation.
 
 __all__ = ["ResNet"]
 
-from typing import Literal
+from typing import Optional, Literal
 import torch
 from torch import nn
 
