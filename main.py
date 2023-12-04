@@ -9,7 +9,7 @@ install the required libraries and tools.
 """
 
 from torch import nn
-from cardiosonix import CardioTrainer
+from cardionix import CardioTrainer
 from cardionix.models import CardioNetV2
 from cardionix.utils import load_from_checkpoint
 from callbacks import callbacks
