@@ -7,3 +7,4 @@ with multi-modal forward support.
 from .resnet import *
 from .mixer import *
 from .shape import *
+from .sparsemax import *
