@@ -10,9 +10,9 @@ install the required libraries and tools.
 
 from torch import nn
 from cardiosonix import CardioTrainer
-from cardiosonix.models import CardioNetV2
+from cardionix.models import CardioNetV2
+from cardionix.utils import load_from_checkpoint
 from callbacks import callbacks
-from cardiosonix.utils import load_from_checkpoint
 from configs import (
     dataset_params,
     etl_pipeline_params,
@@ -31,7 +31,7 @@ def main() -> None:
         lightmodule_config=lightmodule_params,  # Lightmodule configurations
         # Logging configuration
         job_type="research",  # WHAT TYPE JOB YOU DO? (maybe research or just validation)
-        name="Softplus | cardionetv2",  # WHAT YOU DO? (maybe you just test mew features)
+        name="Audio modal | cardionetv2",  # WHAT YOU DO? (maybe you just test mew features)
         tags=["cardionetv2", "Adam", "epoch 150"],  # WHAT CAN YOU ASK ABOUT RUN? ('SGD', 'lr 1e-4', 'etc.')
         seed=42,  # global SEED
         # pl.Trainer kwargs
@@ -42,8 +42,8 @@ def main() -> None:
         enable_model_summary=False,  # enable model summary
         enable_progress_bar=True,  # activate progress bar
         fast_dev_run=False,  # init testing on one epoch
-        max_epochs=1,  # maximum epochs
-        min_epochs=1,  # minimum epochs
+        max_epochs=100,  # maximum epochs
+        min_epochs=10,  # minimum epochs
         num_nodes=1,  # choose nodes
         strategy="auto"  # define strategy
     )
@@ -52,16 +52,13 @@ def main() -> None:
     model = CardioNetV2(
         num_classes=3,
         audio_features_shape=(431, 128),
-        tabular_features=50,
+        rnn_hidden=256,
+        # tabular_features=50,
         rnn_layers=1,
         resnet_backbone={
             512: 2,
             1024: 2,
             2048: 2,
-        },
-        mixer_depth={
-            "tabular": [128, 256, 512],
-            "mixer": [2048]
         }
     )
 

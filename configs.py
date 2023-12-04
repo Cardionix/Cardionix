@@ -15,7 +15,7 @@ __all__ = [
 import torch
 from torch import nn, optim
 from torch.optim import lr_scheduler
-from cardiosonix.configs import (
+from cardionix.configs import (
     ClassifyDatasetParams,
     ETLPipelineParams,
     DataModuleParams,
@@ -25,9 +25,10 @@ from cardiosonix.configs import (
 
 # Arguments for building and splitting dataset and unite classes.
 dataset_params = ClassifyDatasetParams(
-    extra_filepath="Your/Filepath/To/Extra/Dataset",  # file .csv (label encoded CDC survey 2020)
-    audio_dirpath="Your/Dirpath/To/Audio/Of/Heartbeat/Sounds",  # dirpath (DHD/audio dir)
-    labels_filepath="Your/Filepath/To/File/With/Classes/Labels",  # file .csv (DHD/labels.csv file)
+    # extra_filepath="./data/DHD/extra/CDC_survey_2020.csv",  # file .csv (label encoded CDC survey 2020)
+    audio_dirpath="./data/DHD/audio",  # dirpath (DHD/audio dir)
+    metadata_filepath="./data/DHD/metadata.csv",
+    labels_filepath="./data/DHD/labels.csv",  # file .csv (DHD/labels.csv file)
     split_ratio=[0.80, 0.20],  # split ratio of the dataset: 80% - train and 20% - validation
     # Which classes is needed for merging into one class
     merge_classes={
@@ -39,10 +40,11 @@ dataset_params = ClassifyDatasetParams(
 
 # Arguments for preprocessing and augment audio data, encoding and normalizing tabular data.
 etl_pipeline_params = ETLPipelineParams(
-    scaler="Normalizer",  # scaler for normalization or scaling numerical features in tabular data
-    encoder="OneHotEncoder",  # encoder for encoding categorical features in tabular data
-    sample_rate=16000,  # sample rate for the resampling all audio data
-    duration=15,  # duration to pad or clip all audio data
+    pad_mode="nearest_neighbors",
+    # scaler="Normalizer",  # scaler for normalization or scaling numerical features in tabular data
+    # encoder="OneHotEncoder",  # encoder for encoding categorical features in tabular data
+    sample_rate=22050,  # sample rate for the resampling all audio data
+    duration=20,  # duration to pad or clip all audio data
     mono=True,  # one or two audio channels load
     extractor="MFCC",  # extractor name for extracting features from audio data
     # extractor parameters for extracting features from audio data
@@ -50,9 +52,14 @@ etl_pipeline_params = ETLPipelineParams(
         "n_fft": 2048,
         "win_length": 2048,
         "hop_length": 1024,
-        "n_mels": 52,  # number of mel filters
-        "n_mfcc": 52,  # number of mfcc`s
+        "n_mels": 128,  # number of mel filters
+        "n_mfcc": 128,  # number of mfcc`s
         "average_by": None  # average time or frequency axis (non-average if None)
+    },
+    merge_rules={
+        "artifact": "artifact",
+        "healthy": "healthy",
+        "abnormal": {"abnormal": 0.7, "healthy": 0.3}
     }
 )
 
@@ -68,7 +75,7 @@ lightmodule_params = LightningModuleParams(
     lr_scheduler=lr_scheduler.ReduceLROnPlateau,  # learning rate Scheduler
     # and his parameters
     lr_scheduler_kwargs={
-        "patience": 3
+        "patience": 5
     },
     lr_scheduler_dict_kwargs={
         "monitor": "val/loss",

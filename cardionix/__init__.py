@@ -16,10 +16,10 @@ For example::
 
     # Importing our libraries
 
-    >>> from cardiosonix import CardioTrainer
-    >>> from cardiosonix import BaselineRNNModel
-    >>> from cardiosonix import DatasetParams, ETLPipelineParams
-    >>> from cardiosonix import DataModuleParams, LightningModuleParams
+    >>> from cardionix import CardioTrainer
+    >>> from cardionix import BaselineRNNModel
+    >>> from cardionix import DatasetParams, ETLPipelineParams
+    >>> from cardionix import DataModuleParams, LightningModuleParams
 
     # Initializing model
 

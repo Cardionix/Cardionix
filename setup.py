@@ -16,8 +16,8 @@ with open(os.path.join(os.getcwd(), "README.md"), "r") as f:
 
 def main():
     setup(
-        name="cardio-sonix-pipeline",
-        version="1.0.0",
+        name="cardionix",
+        version="1.2.0",
         packages=find_packages(),
         include_package_data=True,
         install_requires=requirements,
