@@ -111,20 +111,11 @@ class GlobalAvgPool1d(nn.Module):
     def __init__(self):
         super().__init__()
 
-    @staticmethod
-    def batch(x: torch.FloatTensor) -> list:
-        samples: list = []
-        for sample in x:
-            sample = sample.mean(1)
-            samples.append(sample)
-        return samples
-
     def forward(self, x: torch.FloatTensor | torch.Tensor) -> torch.FloatTensor:
         if x.dim() == 3:
-            x = self.batch(x)
-            return torch.vstack(x)
+            return torch.mean(x, dim=2)
         elif x.dim() == 2:
-            return x.mean(1)
+            return torch.mean(x, dim=1)
         else:
             raise ValueError(
                 f"Expected tensor with 2 or 3 dimensions, "
