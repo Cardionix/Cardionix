@@ -29,7 +29,6 @@ class CardioLightningModule(pl.LightningModule):
                  model: nn.Module,
                  classes: tuple
                  ):
-
         super().__init__()
         self.save_hyperparameters()
         self.model = model

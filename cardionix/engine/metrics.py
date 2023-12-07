@@ -10,11 +10,17 @@ __all__ = ["CardioMetrics"]
 from typing import Union, Literal, Optional
 from colorama import Fore
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from sklearn.metrics import fbeta_score, roc_auc_score, classification_report
-import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    fbeta_score,
+    roc_auc_score,
+    classification_report
+)
+
 
 
 class MetricsStorage:

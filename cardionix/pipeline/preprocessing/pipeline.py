@@ -7,13 +7,11 @@ __all__ = ["ETLPipeline"]
 
 from pathlib import Path
 from typing import Literal, Optional
-
 import torch
 from torch.nn import Module
 import numpy as np
 import pandas as pd
-
-from cardiosonix.configs import ETLPipelineParams
+from cardionix.configs import ETLPipelineParams
 from .extractors import MFCCExtractor
 from .preprocessors import AudioPreprocessor, TabularPreprocessor
 

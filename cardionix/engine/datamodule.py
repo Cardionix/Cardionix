@@ -11,7 +11,11 @@ from torch.utils.data import DataLoader
 from pydantic import BaseModel
 
 from ..pipeline import CardioAnomalyDataset
-from ..configs import ClassifyDatasetParams, ETLPipelineParams, DataModuleParams
+from ..configs import (
+    ClassifyDatasetParams,
+    ETLPipelineParams,
+    DataModuleParams
+)
 
 
 class CardioDataModule(pl.LightningDataModule):

@@ -11,17 +11,16 @@ __all__ = ["CardioAnomalyDataset"]
 from typing import Literal, Optional
 from pathlib import Path
 import os
-
 import numpy as np
 import pandas as pd
-
 import torch
 from torch.utils.data import Dataset, Subset
-
-from .utils import DatasetPartitioner
-from cardiosonix.configs import ClassifyDatasetParams, ETLPipelineParams
 from ..preprocessing import ETLPipeline
-
+from .utils import DatasetPartitioner
+from cardionix.configs import (
+    ClassifyDatasetParams,
+    ETLPipelineParams
+)
 
 class Builder(DatasetPartitioner):
     """
