@@ -11,7 +11,6 @@ install the required libraries and tools.
 from torch import nn
 from cardionix import CardioTrainer
 from cardionix.models import CardioNetV2
-from cardionix.utils import load_from_checkpoint
 from callbacks import callbacks
 from configs import (
     dataset_params,
@@ -53,7 +52,7 @@ def main() -> None:
         num_classes=3,
         audio_features_shape=(431, 128),
         rnn_hidden=256,
-        # tabular_features=50,
+        tabular_features=50,
         rnn_layers=1,
         resnet_backbone={
             512: 2,
@@ -63,7 +62,7 @@ def main() -> None:
     )
 
     trainer.fit(model)  # start training
-    trainer.predict()  # start prediction
+    trainer.predict(model=model)  # start prediction
 
 
 if __name__ == "__main__":
