@@ -21,55 +21,20 @@ class Concat1d(nn.Module):
         >>> concat = Concat1d()
         >>> y = torch.empty((10, 512))
         >>> y1 = torch.empty((10, 512))
-        >>> out = concat((y, y1))
+        >>> out = concat(y, y1)
         >>> out.shape # torch.Size([10, 1024])
     """
-    def __init__(self, dim: Optional[int] = 0):
+    def __init__(self):
         super().__init__()
-        self.dim = dim
 
-    @staticmethod
-    def __check_sanity(x: list | tuple) -> list:
-        return [
-            data.squeeze()
-            for data in x
-            if isinstance(data, (torch.FloatTensor, torch.Tensor))
-        ]
-
-    def __batch_concat(self,
-                       x: list[torch.FloatTensor, torch.FloatTensor] | tuple[torch.FloatTensor, torch.FloatTensor]
-                       ) -> torch.FloatTensor:
-        samples: list = []
-        batch_size = x[0].shape[0]
-        for i in range(batch_size):
-            to_concat = [x[0][i], x[1][i]]
-            sample = torch.concatenate(to_concat, dim=self.dim)
-            sample = sample.unsqueeze(self.dim)
-            samples.append(sample)
-        return torch.concatenate(samples, dim=self.dim)
-
-    @staticmethod
-    def __is_batch(x: list[torch.FloatTensor, ...] | tuple[torch.FloatTensor, ...]) -> bool:
-        if x[0].dim() == 1:
-            return False
-        return True
-
-    def __concat(self,
-                 x: list[torch.FloatTensor, torch.FloatTensor] | list[torch.FloatTensor]
-                 ) -> torch.FloatTensor:
-        if len(x) == 1:
-            return x[0]
-        if len(x) == 2 and not self.__is_batch(x):
-            return torch.concatenate(x, dim=self.dim)
-        return self.__batch_concat(x)
-
-    def forward(self,
-                x: torch.FloatTensor | list[torch.FloatTensor | None] | list[torch.FloatTensor | torch.FloatTensor]
-                ) -> torch.FloatTensor:
-        if isinstance(x, torch.FloatTensor):
-            return x
-        x = self.__check_sanity(x)
-        return self.__concat(x)
+    def forward(self, audio: torch.FloatTensor, tabular: torch.FloatTensor = None) -> torch.FloatTensor:
+        if not isinstance(tabular, torch.FloatTensor):
+            return audio
+        audio = audio.squeeze()
+        tabular = tabular.squeeze()
+        if audio.dim() == 1:
+            return torch.cat((audio, tabular), dim=0)
+        return torch.cat((audio, tabular), dim=1)
 
 
 class DenseMixer(nn.Module):
@@ -103,6 +68,7 @@ class DenseMixer(nn.Module):
         self.audio_fc = self.__build_fc(self.audio_depth)
         self.tabular_fc = self.__build_fc(self.tabular_depth)
         self.mixer = self.__build_mixer()
+        self.concat = Concat1d()
 
     @property
     def mix_features(self) -> int:
@@ -136,7 +102,7 @@ class DenseMixer(nn.Module):
             )
 
     def __build_mixer(self) -> nn.Sequential:
-        head = nn.ModuleList([Concat1d()])
+        head = nn.ModuleList([])
         for index, (in_features, out_features) in enumerate(self.mixer_depth):
             if index != (len(self.mixer_depth) - 1):
                 head.append(self.get_fcc(in_features, out_features))
@@ -167,4 +133,5 @@ class DenseMixer(nn.Module):
                 ) -> torch.FloatTensor:
         audio_features = self.audio_fc(audio_features)
         tabular_features = self.tabular_fc(tabular_features)
-        return self.mixer((audio_features, tabular_features))
+        features = self.concat(audio_features, tabular_features)
+        return self.mixer(features)
