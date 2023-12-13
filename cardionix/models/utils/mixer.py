@@ -27,8 +27,8 @@ class Concat1d(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, audio: torch.FloatTensor, tabular: torch.FloatTensor = None) -> torch.FloatTensor:
-        if not isinstance(tabular, torch.FloatTensor):
+    def forward(self, audio: torch.Tensor, tabular: torch.Tensor = None) -> torch.Tensor:
+        if not isinstance(tabular, torch.Tensor):
             return audio
         audio = audio.squeeze()
         tabular = tabular.squeeze()
