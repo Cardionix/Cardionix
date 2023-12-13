@@ -37,8 +37,8 @@ class ETLPipeline(AudioPreprocessor, TabularPreprocessor):
     :param scaler: name of scaling function for scaling numerical features on train loop
     :param encoder: name of encoder function for encoding categorical features on train loop
     """
-
     def __init__(self,
+                 stage: Literal["train", "val", "test"],
                  extractor: Literal["MFCC"],
                  extractor_kwargs: Optional[dict] = None,
                  augment_kwargs: Optional[dict] = None,
@@ -62,6 +62,7 @@ class ETLPipeline(AudioPreprocessor, TabularPreprocessor):
         self.__augment_kwargs = augment_kwargs if augment_kwargs else {}
         self.__merge_map = merge_map
         self.__merge_rules = merge_rules
+        self._stage = stage
         self._define_preprocessors(tabular, scaler, encoder)
 
     @property
@@ -167,12 +168,13 @@ class ETLPipeline(AudioPreprocessor, TabularPreprocessor):
         """
         Performs step by step:
             - loading of an audio sample
-            - ata preprocessing
+            - preprocessing
             - augmentation
             - feature extraction
         Finally returns a set of features cast to a tensor type.
         """
         waveform = self.load_safely(filepath)
-        waveform = self.augment(waveform, **self.__augment_kwargs)
+        if self._stage not in ["val", "test"]:
+            waveform = self.augment(waveform, **self.__augment_kwargs)
         waveform = self.to_tensor_waveform(waveform)
         return self.extract_features(waveform)

@@ -22,6 +22,7 @@ from cardionix.configs import (
     ETLPipelineParams
 )
 
+
 class Builder(DatasetPartitioner):
     """
     Build dataset, perform initialization classes for current loop stage:
@@ -53,6 +54,7 @@ class Builder(DatasetPartitioner):
         )
 
         self.__pipeline = ETLPipeline(
+            stage=stage,
             tabular=self.__load(dataset_params.extra_filepath, exclude="label"),
             merge_map=self.__build_merge_map(),
             **etl_pipeline_params.model_dump()
