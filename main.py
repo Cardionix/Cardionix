@@ -28,11 +28,13 @@ def main() -> None:
         dataset_config=dataset_params,  # Dataset configurations
         etl_pipeline_config=etl_pipeline_params,  # ETL-pipeline configurations
         lightmodule_config=lightmodule_params,  # Lightmodule configurations
+
         # Logging configuration
         job_type="research",  # WHAT TYPE JOB YOU DO? (maybe research or just validation)
         name="Audio modal | cardionetv2",  # WHAT YOU DO? (maybe you just test mew features)
         tags=["cardionetv2", "Adam", "epoch 150"],  # WHAT CAN YOU ASK ABOUT RUN? ('SGD', 'lr 1e-4', 'etc.')
-        seed=42,  # global SEED
+        seed=1042,  # global SEED
+
         # pl.Trainer kwargs
         log_every_n_steps=20,  # log metrics every N steps
         callbacks=callbacks,  # define callbacks
@@ -41,7 +43,7 @@ def main() -> None:
         enable_model_summary=False,  # enable model summary
         enable_progress_bar=True,  # activate progress bar
         fast_dev_run=False,  # init testing on one epoch
-        max_epochs=100,  # maximum epochs
+        max_epochs=20,  # maximum epochs
         min_epochs=10,  # minimum epochs
         num_nodes=1,  # choose nodes
         strategy="auto"  # define strategy
@@ -50,10 +52,9 @@ def main() -> None:
     # (~) YOU SHOULD DEFINE YOUR MODEL HERE (~)
     model = CardioNetV2(
         num_classes=3,
-        audio_features_shape=(431, 128),
-        rnn_hidden=256,
-        tabular_features=50,
-        rnn_layers=1,
+        audio_features_shape=(20, 128),
+        rnn_hidden=512,
+        rnn_layers=2,
         resnet_backbone={
             512: 2,
             1024: 2,

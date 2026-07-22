@@ -1,3 +1,6 @@
+# cardiobit is a companion library (see https://github.com/Cardionix/cardiobit).
+# It is currently a private repository. Install it with your own credentials, for example:
+#   pip install "git+ssh://git@github.com/Cardionix/cardiobit.git@master#egg=cardiobit"
 aiohttp==3.8.4
 aiosignal==1.3.1
 annotated-types==0.5.0

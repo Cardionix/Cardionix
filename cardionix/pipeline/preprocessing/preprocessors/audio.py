@@ -33,6 +33,7 @@ class AudioAugmentations:
     def hpss(self, waveform: np.ndarray, p: float = 0.5) -> np.ndarray:
         if not self.__augment_this(p):
             return waveform
+
         coeff_percussive = np.random.uniform(low=0, high=1)
         y_harmonic, y_percussive = effects.hpss(waveform)
         return (1 - coeff_percussive) * y_harmonic + y_percussive * coeff_percussive
