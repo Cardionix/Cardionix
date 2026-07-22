@@ -8,6 +8,8 @@
 
 <sub>PyTorch Lightning · Pydantic-typed experiment configs · Weights & Biases · domain-specific DSP</sub>
 
+**[▶ Explore the interactive showcase](https://cardionix.github.io/Cardionix/)** &nbsp;·&nbsp; a single-page visual walkthrough of this research
+
 <sub>Status: research prototype. Not a medical device. See [§12 Limitations](#12-limitations).</sub>
 
 </div>
