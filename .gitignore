@@ -196,3 +196,5 @@ cython_debug/
 #.idea/
 # W&B local run logs (do not publish)
 wandb/
+
+.playwright-mcp/
